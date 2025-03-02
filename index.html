@@ -7,6 +7,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.1/firebase-database-compat.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
     body { background-color: #f8f9fa; }
@@ -46,16 +49,21 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: 22px !important;
+      font-size: 28px !important;
       color: white;
       background-color: #4361ee;
       border-radius: 50%;
-      width: 36px !important;
-      height: 36px !important;
+      width: 48px !important;
+      height: 48px !important;
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     }
     .marker-temp {
       background-color: #ef233c;
+    }
+    .expiry-info {
+      font-size: 0.75rem;
+      color: #6c757d;
+      margin-top: 0.2rem;
     }
   </style>
 </head>
@@ -97,12 +105,12 @@
         </div>
         <div class="food-entries">
           <div class="entries-title">
-            <h2 style="font-size: 1.1rem;">Your Food Locations</h2>
+            <h2 style="font-size: 1.1rem;">Available Food Locations</h2>
             <span id="entries-count" class="entries-counter">0</span>
           </div>
           <div id="empty-state" class="empty-state">
             <i class="fas fa-map" style="display: block; margin-bottom: 0.5rem;"></i>
-            <p>No food locations added yet.</p>
+            <p>No food locations available.</p>
           </div>
           <ul id="food-list" class="food-list"></ul>
         </div>
@@ -113,11 +121,28 @@
     </div>
   </div>
   <script>
-    let map, markers = [], foodEntries = [], selectedCoordinates = null, debounceTimer, searchResults = [];
+    // Firebase configuration - REPLACE WITH YOUR OWN CONFIG
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const foodLocationsRef = database.ref('foodLocations');
+    
+    let map, markers = {}, selectedCoordinates = null, debounceTimer, searchResults = [];
     
     window.onload = function() {
       initializeMap();
       setupEventListeners();
+      listenForFoodLocations();
     };
     
     function initializeMap() {
@@ -138,13 +163,13 @@
         const icon = L.divIcon({
           className: 'custom-marker marker-temp',
           html: '<i class="fas fa-crosshairs"></i>',
-          iconSize: [36, 36],
-          iconAnchor: [18, 18]
+          iconSize: [48, 48],
+          iconAnchor: [24, 24]
         });
         
         const marker = L.marker([lat, lng], {icon}).addTo(map);
         marker.isTemporary = true;
-        markers.push(marker);
+        markers.temp = marker;
         marker.bindPopup(`<div style="padding:8px"><b>Selected location</b><br>${lat.toFixed(5)}, ${lng.toFixed(5)}</div>`).openPopup();
       });
       
@@ -221,13 +246,13 @@
       const icon = L.divIcon({
         className: 'custom-marker marker-temp',
         html: '<i class="fas fa-crosshairs"></i>',
-        iconSize: [36, 36],
-        iconAnchor: [18, 18]
+        iconSize: [48, 48],
+        iconAnchor: [24, 24]
       });
       
       const marker = L.marker([lat, lng], {icon}).addTo(map);
       marker.isTemporary = true;
-      markers.push(marker);
+      markers.temp = marker;
       marker.bindPopup(`<div style="padding:8px"><b>Selected location</b><br>${result.display_name}</div>`).openPopup();
       map.setView([lat, lng], 15);
     }
@@ -249,11 +274,9 @@
     }
     
     function clearTemporaryMarkers() {
-      for (let i = markers.length - 1; i >= 0; i--) {
-        if (markers[i].isTemporary) {
-          map.removeLayer(markers[i]);
-          markers.splice(i, 1);
-        }
+      if (markers.temp) {
+        map.removeLayer(markers.temp);
+        delete markers.temp;
       }
     }
     
@@ -272,65 +295,127 @@
         return;
       }
       
+      // Create entry with expiration timestamp (24 hours from now)
+      const now = Date.now();
       const entry = {
-        id: Date.now(),
+        id: now.toString(), // Use timestamp as ID
         location: location,
         food: food,
         amount: amount,
-        coordinates: selectedCoordinates
+        coordinates: {
+          lat: selectedCoordinates[0],
+          lng: selectedCoordinates[1]
+        },
+        timestamp: now,
+        expiresAt: now + (24 * 60 * 60 * 1000) // 24 hours in milliseconds
       };
       
-      foodEntries.push(entry);
-      updateFoodList();
-      
-      const icon = L.divIcon({
-        className: 'custom-marker',
-        html: '<i class="fas fa-utensils"></i>',
-        iconSize: [36, 36],
-        iconAnchor: [18, 18]
-      });
-      
-      const marker = L.marker(selectedCoordinates, {icon}).addTo(map);
-      marker.entryId = entry.id;
-      marker.bindPopup(`<div style="padding:8px"><b>${food}</b><br>${location}<br>Quantity: ${amount}</div>`);
-      markers.push(marker);
-      
-      document.getElementById('location').value = '';
-      document.getElementById('food').value = '';
-      document.getElementById('amount').value = '1';
-      selectedCoordinates = null;
-      clearTemporaryMarkers();
-      
-      map.setView(entry.coordinates, Math.max(map.getZoom(), 15));
+      // Save to Firebase
+      foodLocationsRef.child(entry.id).set(entry)
+        .then(() => {
+          console.log("Food location added successfully");
+          document.getElementById('location').value = '';
+          document.getElementById('food').value = '';
+          document.getElementById('amount').value = '1';
+          selectedCoordinates = null;
+          clearTemporaryMarkers();
+        })
+        .catch((error) => {
+          console.error("Error adding food location: ", error);
+          alert("Error adding food location. Please try again.");
+        });
     }
     
-    function updateFoodList() {
+    function listenForFoodLocations() {
+      // Listen for data changes (additions, changes, removals)
+      foodLocationsRef.on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        const now = Date.now();
+        const foodLocations = [];
+        
+        // Clear all current markers
+        Object.values(markers).forEach(marker => {
+          if (!marker.isTemporary) {
+            map.removeLayer(marker);
+          }
+        });
+        markers = markers.temp ? { temp: markers.temp } : {};
+        
+        // Add markers for current locations
+        Object.entries(data).forEach(([id, entry]) => {
+          // Skip if expired
+          if (entry.expiresAt < now) {
+            // Remove expired entries from database
+            foodLocationsRef.child(id).remove();
+            return;
+          }
+          
+          foodLocations.push(entry);
+          
+          // Create marker for this location
+          const icon = L.divIcon({
+            className: 'custom-marker',
+            html: '<i class="fas fa-utensils"></i>',
+            iconSize: [48, 48],
+            iconAnchor: [24, 24]
+          });
+          
+          const marker = L.marker([entry.coordinates.lat, entry.coordinates.lng], {icon}).addTo(map);
+          markers[id] = marker;
+          
+          // Calculate time remaining
+          const hoursRemaining = Math.floor((entry.expiresAt - now) / (60 * 60 * 1000));
+          const minutesRemaining = Math.floor(((entry.expiresAt - now) % (60 * 60 * 1000)) / (60 * 1000));
+          
+          marker.bindPopup(`
+            <div style="padding:8px">
+              <b>${entry.food}</b><br>
+              ${entry.location}<br>
+              Quantity: ${entry.amount}<br>
+              <span style="font-size:0.8rem;color:#6c757d;">
+                Expires in: ${hoursRemaining}h ${minutesRemaining}m
+              </span>
+            </div>
+          `);
+        });
+        
+        updateFoodList(foodLocations);
+      });
+    }
+    
+    function updateFoodList(foodLocations) {
       const foodList = document.getElementById('food-list');
       foodList.innerHTML = '';
-      document.getElementById('entries-count').textContent = foodEntries.length;
-      document.getElementById('empty-state').style.display = foodEntries.length === 0 ? 'block' : 'none';
+      document.getElementById('entries-count').textContent = foodLocations.length;
+      document.getElementById('empty-state').style.display = foodLocations.length === 0 ? 'block' : 'none';
       
-      foodEntries.forEach(function(entry) {
+      // Sort by newest first
+      foodLocations.sort((a, b) => b.timestamp - a.timestamp);
+      
+      const now = Date.now();
+      
+      foodLocations.forEach(function(entry) {
+        // Calculate time remaining
+        const hoursRemaining = Math.floor((entry.expiresAt - now) / (60 * 60 * 1000));
+        const minutesRemaining = Math.floor(((entry.expiresAt - now) % (60 * 60 * 1000)) / (60 * 1000));
+        
         const listItem = document.createElement('li');
         listItem.className = 'food-item';
         listItem.innerHTML = `
           <div>
             <div class="food-name">${entry.food}</div>
             <div class="food-location">${entry.location}</div>
+            <div class="expiry-info">Expires in: ${hoursRemaining}h ${minutesRemaining}m</div>
           </div>
           <div>
             <span class="food-amount">${entry.amount}</span>
-            <button onclick="removeEntry(${entry.id})" class="btn-delete">
-              <i class="fas fa-trash-alt"></i>
-            </button>
           </div>
         `;
         
-        listItem.addEventListener('click', function(e) {
-          if (e.target.closest('.btn-delete')) return;
-          const marker = markers.find(m => m.entryId === entry.id);
+        listItem.addEventListener('click', function() {
+          const marker = markers[entry.id];
           if (marker) {
-            map.setView(entry.coordinates, 15);
+            map.setView([entry.coordinates.lat, entry.coordinates.lng], 15);
             marker.openPopup();
           }
         });
@@ -338,20 +423,6 @@
         foodList.appendChild(listItem);
       });
     }
-    
-    window.removeEntry = function(id) {
-      foodEntries = foodEntries.filter(entry => entry.id !== id);
-      
-      for (let i = markers.length - 1; i >= 0; i--) {
-        if (markers[i].entryId === id) {
-          map.removeLayer(markers[i]);
-          markers.splice(i, 1);
-          break;
-        }
-      }
-      
-      updateFoodList();
-    };
   </script>
 </body>
 </html>
