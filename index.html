@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Mobile viewport for responsive design -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>MealsForAll</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
@@ -129,6 +130,7 @@
   </div>
   
   <script>
+    // Initialize Supabase client
     const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
     const sb = supabase.createClient(supabaseUrl, supabaseKey);
@@ -209,8 +211,14 @@
     }
     
     window.onload = () => {
+      // Initialize the map with responsive settings
       map = L.map('map', { center: [31.7683, 35.2137], zoom: 8, minZoom: 7, maxZoom: 18 });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      
+      // Recalculate map size on window resize for mobile responsiveness
+      window.addEventListener('resize', () => {
+        map.invalidateSize();
+      });
       
       map.on('click', e => {
         const { lat, lng } = e.latlng;
@@ -277,7 +285,7 @@
         els.cancelBtn.style.display = 'none';
       });
       
-      // Initialize realtime updates so all users see changes live.
+      // Initialize realtime updates so all users see changes live
       initializeSupabaseRealtime();
       fetchFoodLocations();
       
@@ -286,6 +294,16 @@
         foodLocations.filter(entry => entry.expiresAt < now)
           .forEach(entry => deleteFoodLocation(entry.id));
       }, 60000);
+      
+      // Locate the mobile user's position and add a marker
+      map.locate({ setView: true, maxZoom: 16 });
+      map.on('locationfound', e => {
+        L.marker(e.latlng).addTo(map)
+          .bindPopup("You are here").openPopup();
+      });
+      map.on('locationerror', e => {
+        console.error("Location error:", e.message);
+      });
     };
     
     function searchAddress(query) {
