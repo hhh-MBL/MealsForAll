@@ -1,478 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MealsForAll with Firebase</title>
-  <!-- Leaflet CSS & JS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
-  <!-- Firebase Scripts (using compat versions for easier migration) -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-    body { background-color: #f8f9fa; }
-    .app-container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
-    .app-title { font-size: 2rem; color: #4361ee; }
-    .main-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1rem; height: calc(100vh - 100px); }
-    @media (max-width: 768px) { .main-layout { grid-template-columns: 1fr; height: auto; } }
-    .sidebar { background: white; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); padding: 1rem; height: 100%; display: flex; flex-direction: column; }
-    #map-container { height: 100%; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
-    #map { height: 100%; width: 100%; }
-    .form-group { margin-bottom: 1rem; }
-    label { display: block; margin-bottom: 0.3rem; font-weight: 500; }
-    .input-with-icon { position: relative; }
-    .input-with-icon i { position: absolute; left: .7rem; top: 50%; transform: translateY(-50%); color: #adb5bd; }
-    input { width: 100%; padding: 0.7rem 1rem 0.7rem 2rem; border: 1px solid #dee2e6; border-radius: 8px; }
-    input:focus { outline: none; border-color: #4361ee; }
-    .btn { padding: 0.7rem; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; }
-    .btn-primary { background-color: #4361ee; color: white; width: 100%; }
-    .food-entries { margin-top: auto; max-height: 250px; overflow-y: auto; }
-    .entries-title { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
-    .entries-counter { background-color: #4361ee; color: white; border-radius: 10px; font-size: 0.75rem; padding: 2px 6px; }
-    .food-list { list-style-type: none; }
-    .food-item { padding: 0.5rem; border-radius: 6px; margin-bottom: 0.3rem; background-color: #f8f9fa; display: flex; justify-content: space-between; }
-    .food-name { font-weight: 600; }
-    .food-location { font-size: 0.85rem; color: #6c757d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .food-amount { background-color: #4361ee; color: white; border-radius: 12px; font-size: 0.8rem; padding: 2px 6px; margin-left: 0.5rem; }
-    .search-results { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #dee2e6; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 1000; max-height: 200px; overflow-y: auto; display: none; }
-    .search-results.active { display: block; }
-    .search-item { padding: 0.5rem; border-bottom: 1px solid #f8f9fa; cursor: pointer; }
-    .search-item:hover { background-color: #f8f9fa; }
-    .empty-state { text-align: center; padding: 1rem; color: #adb5bd; }
-    .loading-spinner { display: none; width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.1); border-left-color: #4361ee; border-radius: 50%; animation: spin 1s linear infinite; margin-left: 8px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    /* Custom marker styles */
-    .custom-marker {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 28px !important;
-      color: white;
-      background-color: #4361ee;
-      border-radius: 50%;
-      width: 48px !important;
-      height: 48px !important;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-    }
-    .marker-temp {
-      background-color: #ef233c;
-    }
-    .expiry-info {
-      font-size: 0.75rem;
-      color: #6c757d;
-      margin-top: 0.2rem;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase Integration</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.0.0/dist/umd/supabase.min.js"></script>
 </head>
 <body>
-  <div class="app-container">
-    <header style="margin-bottom: 1rem;">
-      <h1 class="app-title">MealsForAll</h1>
-    </header>
-    <div class="main-layout">
-      <div class="sidebar">
-        <div>
-          <h2 style="margin-bottom: 1rem; font-size: 1.2rem;">Add Food Location</h2>
-          <div class="form-group">
-            <label for="location">Location</label>
-            <div class="input-with-icon">
-              <i class="fas fa-map-marker-alt"></i>
-              <input type="text" id="location" placeholder="Enter address or click on map">
-              <div id="loading-spinner" class="loading-spinner"></div>
-            </div>
-            <div id="search-results" class="search-results"></div>
-          </div>
-          <div class="form-group">
-            <label for="food">Food Type</label>
-            <div class="input-with-icon">
-              <i class="fas fa-utensils"></i>
-              <input type="text" id="food" placeholder="What food is available here?">
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="amount">Amount</label>
-            <div class="input-with-icon">
-              <i class="fas fa-hashtag"></i>
-              <input type="number" id="amount" min="1" value="1">
-            </div>
-          </div>
-          <button id="submit-btn" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Add Food Location
-          </button>
-        </div>
-        <div class="food-entries">
-          <div class="entries-title">
-            <h2 style="font-size: 1.1rem;">Available Food Locations</h2>
-            <span id="entries-count" class="entries-counter">0</span>
-          </div>
-          <div id="empty-state" class="empty-state">
-            <i class="fas fa-map" style="display: block; margin-bottom: 0.5rem;"></i>
-            <p>No food locations available.</p>
-          </div>
-          <ul id="food-list" class="food-list"></ul>
-        </div>
-      </div>
-      <div id="map-container">
-        <div id="map"></div>
-      </div>
-    </div>
-  </div>
+  <h1>Supabase Integration</h1>
+  <button class="fetch">Fetch Items</button>
+  <button class="add">Add Item</button>
+
   <script>
-    // Firebase configuration - replace with your own settings
-    const firebaseConfig = {
-        apiKey: "AIzaSyA8-USLiifBPEkMEqwyldzLPfGnRTxc_nI",
-        authDomain: "mealsforall-7f356.firebaseapp.com",
-        projectId: "mealsforall-7f356",
-        storageBucket: "mealsforall-7f356.firebasestorage.app",
-        messagingSenderId: "1090473328332",
-        appId: "1:1090473328332:web:6fab6c35753e877b19cc69",
-        measurementId: "G-819V9TJPY9"
-    };
+    window.addEventListener('DOMContentLoaded', () => {
+      // Your Supabase credentials
+      const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
+      const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
 
-    // Initialize Firebase and get Firestore
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    let map, markers = {}, selectedCoordinates = null, debounceTimer, searchResults = [];
-    let foodLocations = [];
-
-    window.onload = function() {
-      initializeMap();
-      setupEventListeners();
-      fetchFoodLocations();
-      setupRealtimeSubscription();
-    };
-
-    function initializeMap() {
-      map = L.map('map', {
-        center: [31.7683, 35.2137],
-        zoom: 8,
-        minZoom: 7,
-        maxZoom: 18
-      });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-      map.on('click', function(e) {
-        const lat = e.latlng.lat, lng = e.latlng.lng;
-        selectedCoordinates = [lat, lng];
-        reverseGeocode(lat, lng);
-        clearTemporaryMarkers();
-        const icon = L.divIcon({
-          className: 'custom-marker marker-temp',
-          html: '<i class="fas fa-crosshairs"></i>',
-          iconSize: [48, 48],
-          iconAnchor: [24, 24]
-        });
-        const marker = L.marker([lat, lng], {icon}).addTo(map);
-        marker.isTemporary = true;
-        markers.temp = marker;
-        marker.bindPopup(`<div style="padding:8px"><b>Selected location</b><br>${lat.toFixed(5)}, ${lng.toFixed(5)}</div>`).openPopup();
-      });
-
-      setTimeout(() => map.invalidateSize(), 100);
-    }
-
-    function setupEventListeners() {
-      const locationInput = document.getElementById('location');
-      const searchResultsContainer = document.getElementById('search-results');
-
-      locationInput.addEventListener('input', function() {
-        const query = this.value.trim();
-        clearTimeout(debounceTimer);
-        if (query.length < 3) {
-          searchResultsContainer.classList.remove('active');
-          return;
+      // Fetch items from the 'items' table
+      async function fetchItems() {
+        try {
+          const { data, error } = await supabaseClient
+            .from('items')
+            .select('*');
+          if (error) throw error;
+          console.log('Items:', data);
+        } catch (error) {
+          console.error('Error fetching items:', error.message || error);
         }
-        document.getElementById('loading-spinner').style.display = 'inline-block';
-        debounceTimer = setTimeout(() => searchAddress(query), 500);
-      });
+      }
 
-      document.addEventListener('click', function(e) {
-        if (!e.target.closest('#location') && !e.target.closest('#search-results')) {
-          searchResultsContainer.classList.remove('active');
+      // Add an item to the 'items' table
+      async function addItem(name, description) {
+        try {
+          const { data, error } = await supabaseClient
+            .from('items')
+            .insert([{ name: name, description: description }])
+            .select(); // Return the inserted data
+          if (error) throw error;
+          console.log('Item added:', data);
+        } catch (error) {
+          console.error('Error adding item:', error.message || error);
         }
+      }
+
+      // Event listeners
+      document.querySelector('button.fetch').addEventListener('click', fetchItems);
+      document.querySelector('button.add').addEventListener('click', () => {
+        addItem('Sample Item', 'This is a sample description');
       });
 
-      document.getElementById('submit-btn').addEventListener('click', addNewFoodEntry);
-    }
-
-    function searchAddress(query) {
-      const searchResultsContainer = document.getElementById('search-results');
-      const loadingSpinner = document.getElementById('loading-spinner');
-
-      if (!query.toLowerCase().includes('israel')) query += ' Israel';
-
-      fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=il&limit=5`)
-        .then(response => response.json())
-        .then(data => {
-          searchResults = data;
-          loadingSpinner.style.display = 'none';
-          searchResultsContainer.innerHTML = '';
-
-          if (data.length === 0) {
-            searchResultsContainer.innerHTML = '<div class="search-item">No results found</div>';
-          } else {
-            data.forEach((result, index) => {
-              const item = document.createElement('div');
-              item.className = 'search-item';
-              item.textContent = result.display_name;
-              item.addEventListener('click', () => selectSearchResult(index));
-              searchResultsContainer.appendChild(item);
-            });
+      // Real-time subscription
+      supabaseClient
+        .channel('public:items')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'items' },
+          (payload) => {
+            console.log('New item added:', payload.new);
           }
-          searchResultsContainer.classList.add('active');
-        })
-        .catch(error => {
-          loadingSpinner.style.display = 'none';
-          searchResultsContainer.innerHTML = '<div class="search-item">Error searching for address</div>';
-          searchResultsContainer.classList.add('active');
-        });
-    }
-
-    function selectSearchResult(index) {
-      const result = searchResults[index];
-      document.getElementById('location').value = result.display_name;
-      document.getElementById('search-results').classList.remove('active');
-
-      const lat = parseFloat(result.lat), lng = parseFloat(result.lon);
-      selectedCoordinates = [lat, lng];
-
-      clearTemporaryMarkers();
-      const icon = L.divIcon({
-        className: 'custom-marker marker-temp',
-        html: '<i class="fas fa-crosshairs"></i>',
-        iconSize: [48, 48],
-        iconAnchor: [24, 24]
-      });
-      const marker = L.marker([lat, lng], {icon}).addTo(map);
-      marker.isTemporary = true;
-      markers.temp = marker;
-      marker.bindPopup(`<div style="padding:8px"><b>Selected location</b><br>${result.display_name}</div>`).openPopup();
-      map.setView([lat, lng], 15);
-    }
-
-    function reverseGeocode(lat, lng) {
-      const locationInput = document.getElementById('location');
-      document.getElementById('loading-spinner').style.display = 'inline-block';
-
-      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
-        .then(response => response.json())
-        .then(data => {
-          locationInput.value = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-          document.getElementById('loading-spinner').style.display = 'none';
-        })
-        .catch(error => {
-          locationInput.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-          document.getElementById('loading-spinner').style.display = 'none';
-        });
-    }
-
-    function clearTemporaryMarkers() {
-      if (markers.temp) {
-        map.removeLayer(markers.temp);
-        delete markers.temp;
-      }
-    }
-
-    async function addNewFoodEntry() {
-      const location = document.getElementById('location').value;
-      const food = document.getElementById('food').value;
-      const amount = document.getElementById('amount').value;
-
-      if (!location || !food || !amount) {
-        alert('Please fill in all fields!');
-        return;
-      }
-      if (!selectedCoordinates) {
-        alert('Please select a location on the map or search for an address');
-        return;
-      }
-
-      const now = Date.now();
-      const entry = {
-        location: location,
-        food: food,
-        amount: parseInt(amount),
-        coordinates: {
-          lat: selectedCoordinates[0],
-          lng: selectedCoordinates[1]
-        },
-        timestamp: now,
-        expiresAt: now + (24 * 60 * 60 * 1000) // 24 hours
-      };
-
-      try {
-        // Use the timestamp as the document ID
-        await db.collection('food_locations').doc(now.toString()).set(entry);
-        console.log("Food location added successfully");
-        document.getElementById('location').value = '';
-        document.getElementById('food').value = '';
-        document.getElementById('amount').value = '1';
-        selectedCoordinates = null;
-        clearTemporaryMarkers();
-      } catch (error) {
-        console.error("Error adding food location: ", error);
-        alert("Error adding food location. Please try again.");
-      }
-    }
-
-    async function fetchFoodLocations() {
-      try {
-        const now = Date.now();
-        // Get food locations that haven't expired
-        const snapshot = await db.collection('food_locations').where('expiresAt', '>', now).get();
-        let fetchedLocations = [];
-        snapshot.forEach(doc => {
-          let data = doc.data();
-          data.id = doc.id;
-          fetchedLocations.push(data);
-        });
-
-        // Delete expired entries
-        const expiredSnapshot = await db.collection('food_locations').where('expiresAt', '<', now).get();
-        expiredSnapshot.forEach(async doc => {
-          await db.collection('food_locations').doc(doc.id).delete();
-        });
-
-        foodLocations = fetchedLocations;
-        updateMapMarkers();
-        updateFoodList();
-      } catch (error) {
-        console.error("Error fetching food locations:", error);
-      }
-    }
-
-    function setupRealtimeSubscription() {
-      db.collection('food_locations')
-        .where('expiresAt', '>', Date.now())
-        .onSnapshot(snapshot => {
-          snapshot.docChanges().forEach(change => {
-            const docData = change.doc.data();
-            docData.id = change.doc.id;
-            if (change.type === "added") {
-              if (!foodLocations.find(loc => loc.id === docData.id)) {
-                foodLocations.push(docData);
-                addMarkerForLocation(docData);
-              }
-            } else if (change.type === "removed") {
-              foodLocations = foodLocations.filter(loc => loc.id !== docData.id);
-              if (markers[docData.id]) {
-                map.removeLayer(markers[docData.id]);
-                delete markers[docData.id];
-              }
-            }
-          });
-          updateFoodList();
-        });
-    }
-
-    function updateMapMarkers() {
-      Object.values(markers).forEach(marker => {
-        if (!marker.isTemporary) {
-          map.removeLayer(marker);
-        }
-      });
-      markers = markers.temp ? { temp: markers.temp } : {};
-      foodLocations.forEach(entry => {
-        addMarkerForLocation(entry);
-      });
-    }
-
-    function addMarkerForLocation(entry) {
-      const icon = L.divIcon({
-        className: 'custom-marker',
-        html: '<i class="fas fa-utensils"></i>',
-        iconSize: [48, 48],
-        iconAnchor: [24, 24]
-      });
-
-      const marker = L.marker([entry.coordinates.lat, entry.coordinates.lng], {icon}).addTo(map);
-      markers[entry.id] = marker;
-
-      const now = Date.now();
-      const hoursRemaining = Math.floor((entry.expiresAt - now) / (60 * 60 * 1000));
-      const minutesRemaining = Math.floor(((entry.expiresAt - now) % (60 * 60 * 1000)) / (60 * 1000));
-
-      marker.bindPopup(`
-        <div style="padding:8px">
-          <b>${entry.food}</b><br>
-          ${entry.location}<br>
-          Quantity: ${entry.amount}<br>
-          <span style="font-size:0.8rem;color:#6c757d;">
-            Expires in: ${hoursRemaining}h ${minutesRemaining}m
-          </span>
-        </div>
-      `);
-    }
-
-    function updateFoodList() {
-      const foodList = document.getElementById('food-list');
-      foodList.innerHTML = '';
-      document.getElementById('entries-count').textContent = foodLocations.length;
-      document.getElementById('empty-state').style.display = foodLocations.length === 0 ? 'block' : 'none';
-
-      const sortedLocations = [...foodLocations].sort((a, b) => b.timestamp - a.timestamp);
-      const now = Date.now();
-
-      sortedLocations.forEach(function(entry) {
-        const hoursRemaining = Math.floor((entry.expiresAt - now) / (60 * 60 * 1000));
-        const minutesRemaining = Math.floor(((entry.expiresAt - now) % (60 * 60 * 1000)) / (60 * 1000));
-        const listItem = document.createElement('li');
-        listItem.className = 'food-item';
-        listItem.dataset.id = entry.id;
-        listItem.innerHTML = `
-          <div>
-            <div class="food-name">${entry.food}</div>
-            <div class="food-location">${entry.location}</div>
-            <div class="expiry-info">Expires in: ${hoursRemaining}h ${minutesRemaining}m</div>
-          </div>
-          <div>
-            <span class="food-amount">${entry.amount}</span>
-          </div>
-        `;
-        listItem.addEventListener('click', function() {
-          const marker = markers[entry.id];
-          if (marker) {
-            map.setView([entry.coordinates.lat, entry.coordinates.lng], 15);
-            marker.openPopup();
-          }
-        });
-        foodList.appendChild(listItem);
-      });
-    }
-
-    // Refresh UI every minute to update expiry times
-    setInterval(() => {
-      const now = Date.now();
-      const expiredEntries = foodLocations.filter(entry => entry.expiresAt < now);
-      if (expiredEntries.length > 0) {
-        foodLocations = foodLocations.filter(entry => entry.expiresAt >= now);
-        expiredEntries.forEach(entry => {
-          if (markers[entry.id]) {
-            map.removeLayer(markers[entry.id]);
-            delete markers[entry.id];
-          }
-        });
-        updateFoodList();
-      } else {
-        document.querySelectorAll('.food-item').forEach(item => {
-          const entryId = item.dataset.id;
-          const entry = foodLocations.find(e => e.id === entryId);
-          if (entry) {
-            const expiryInfo = item.querySelector('.expiry-info');
-            if (expiryInfo) {
-              const hoursRemaining = Math.floor((entry.expiresAt - now) / (60 * 60 * 1000));
-              const minutesRemaining = Math.floor(((entry.expiresAt - now) % (60 * 60 * 1000)) / (60 * 1000));
-              expiryInfo.textContent = `Expires in: ${hoursRemaining}h ${minutesRemaining}m`;
-            }
-          }
-        });
-      }
-    }, 60000);
+        )
+        .subscribe();
+    });
   </script>
 </body>
 </html>
