@@ -8,8 +8,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
-  <!-- Load Supabase JS client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     /* Styles remain the same */
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
@@ -131,15 +129,10 @@
   </div>
   
   <script>
-    // Initialize Supabase client
-    const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
-    const sb = supabase.createClient(supabaseUrl, supabaseKey);
-    
     // Storage for food locations and markers
     let map, markers = {}, foodLocations = [];
     let selectedCoordinates = null, debounceTimer, searchResults = [], selectedImage = null;
-    
+
     // DOM elements
     const els = {
       location: document.getElementById('location'),
@@ -156,30 +149,33 @@
       entriesCount: document.getElementById('entries-count'),
       emptyState: document.getElementById('empty-state')
     };
-    
+
+    // Helper to format remaining time (for demo purposes)
     const formatTime = ms => `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
-    
+
+    // Create a custom marker icon
     const createMarkerIcon = isTemp => L.divIcon({
       className: `custom-marker${isTemp ? ' marker-temp' : ''}`,
       html: `<i class="fas fa-${isTemp ? 'crosshairs' : 'utensils'}"></i>`,
       iconSize: [48, 48],
       iconAnchor: [24, 24]
     });
-    
+
+    // Remove temporary marker (if any)
     const clearTemporaryMarkers = () => {
       if (markers.temp) { map.removeLayer(markers.temp); delete markers.temp; }
     };
-    
+
     const removeImagePreview = () => {
       els.imagePreview.style.display = 'none';
       els.imagePreview.src = '';
       els.removeImage.style.display = 'none';
       selectedImage = null;
     };
-    
-    // Functions to update markers and list
+
+    // Add marker to map for a given location entry
     function addMarkerForLocation(entry) {
-      if (!entry || !entry.id || !entry.coordinates || !entry.coordinates.lat || !entry.coordinates.lng) return;
+      if (!entry || !entry.id || !entry.coordinates) return;
       const lat = entry.coordinates.lat;
       const lng = entry.coordinates.lng;
       const marker = L.marker([lat, lng], { icon: createMarkerIcon() }).addTo(map);
@@ -213,15 +209,18 @@
         }
       });
     }
-    
+
+    // Remove marker from map by id
     function removeMarker(id) {
       if (markers[id]) {
         map.removeLayer(markers[id]);
         delete markers[id];
       }
     }
-    
+
+    // Update all markers on the map based on current foodLocations
     function updateMapMarkers() {
+      // Clear existing markers (except temporary)
       Object.keys(markers).forEach(key => {
         if (key !== 'temp' && markers[key]) {
           map.removeLayer(markers[key]);
@@ -230,7 +229,8 @@
       });
       foodLocations.forEach(addMarkerForLocation);
     }
-    
+
+    // Update the food list in the sidebar
     function updateFoodList() {
       els.foodList.innerHTML = '';
       els.entriesCount.textContent = foodLocations.length;
@@ -265,94 +265,107 @@
           els.foodList.appendChild(listItem);
         });
     }
-    
-    async function deleteFoodLocation(id) {
-      try {
-        foodLocations = foodLocations.filter(loc => loc.id !== id);
-        removeMarker(id);
-        updateFoodList();
-        // DELETE request to backend API
-        const response = await fetch('https://your-server.com/api/delete_location', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id })
-        });
-        if (!response.ok) throw new Error('Delete failed');
-      } catch (e) {
-        alert("Error deleting food location. Please try again.");
-        fetchFoodLocations();
+
+    // Save current foodLocations to localStorage
+    function saveFoodLocations() {
+      localStorage.setItem('foodLocations', JSON.stringify(foodLocations));
+    }
+
+    // Load foodLocations from localStorage
+    function loadFoodLocations() {
+      const data = localStorage.getItem('foodLocations');
+      foodLocations = data ? JSON.parse(data) : [];
+      updateMapMarkers();
+      updateFoodList();
+    }
+
+    // Delete a food location entry
+    function deleteFoodLocation(id) {
+      foodLocations = foodLocations.filter(loc => loc.id !== id);
+      removeMarker(id);
+      updateFoodList();
+      saveFoodLocations();
+    }
+
+    // Remove expired locations every minute
+    function removeExpiredLocations() {
+      const now = Date.now();
+      const expired = foodLocations.filter(entry => entry.expiresAt < now);
+      if(expired.length) {
+        expired.forEach(entry => deleteFoodLocation(entry.id));
       }
     }
-    
-    async function fetchFoodLocations() {
-      try {
-        const now = Date.now();
-        // Fetch current locations from your backend API
-        const res = await fetch(`https://your-server.com/api/food_locations?minExpires=${now}`);
-        const data = await res.json();
-        foodLocations = data || [];
-        updateMapMarkers();
-        updateFoodList();
-      } catch (e) {
-        alert("Error loading food locations. Please try again later.");
-      }
-    }
-    
-    // Initialize Supabase realtime subscriptions for "food_locations"
-    function initializeSupabaseRealtime() {
-      const realtimeChannel = sb.channel('public:food_locations');
+
+    // Handle adding a new food entry (simulate image upload by using a Data URL)
+    async function addNewFoodEntry() {
+      const loc = els.location.value, food = els.food.value, amount = els.amount.value;
+      if (!loc || !food || !amount) { alert('Please fill in all fields!'); return; }
+      if (!selectedCoordinates) { alert('Please select a location on the map or search for an address'); return; }
       
-      realtimeChannel
-        .on('postgres_changes', 
-          { event: 'INSERT', schema: 'public', table: 'food_locations' },
-          payload => {
-            const newEntry = payload.new;
-            if (!foodLocations.find(loc => loc.id === newEntry.id)) {
-              foodLocations.push(newEntry);
-              addMarkerForLocation(newEntry);
-              updateFoodList();
-            }
-          }
-        )
-        .on('postgres_changes', 
-          { event: 'DELETE', schema: 'public', table: 'food_locations' },
-          payload => {
-            const deleted = payload.old;
-            foodLocations = foodLocations.filter(loc => loc.id !== deleted.id);
-            removeMarker(deleted.id);
-            updateFoodList();
-          }
-        )
-        .on('postgres_changes', 
-          { event: 'UPDATE', schema: 'public', table: 'food_locations' },
-          payload => {
-            const updated = payload.new;
-            foodLocations = foodLocations.map(loc => loc.id === updated.id ? updated : loc);
-            removeMarker(updated.id);
-            addMarkerForLocation(updated);
-            updateFoodList();
-          }
-        )
-        .subscribe(() => {
-          console.log('Supabase realtime subscription active.');
-        });
+      els.submitBtn.disabled = true;
+      els.submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+      
+      const now = Date.now();
+      let imageUrl = null;
+      if (selectedImage) {
+        // For demonstration, we use a base64 Data URL already read in the preview.
+        imageUrl = els.imagePreview.src;
+      }
+      
+      const entry = {
+        id: now.toString(),
+        location: loc,
+        food,
+        amount: parseInt(amount),
+        coordinates: { lat: selectedCoordinates[0], lng: selectedCoordinates[1] },
+        timestamp: now,
+        expiresAt: now + (24 * 60 * 60 * 1000),
+        imageUrl
+      };
+      
+      foodLocations.push(entry);
+      updateMapMarkers();
+      updateFoodList();
+      saveFoodLocations();
+      
+      // Reset form and temporary marker
+      els.location.value = '';
+      els.food.value = '';
+      els.amount.value = '1';
+      removeImagePreview();
+      selectedCoordinates = null;
+      clearTemporaryMarkers();
+      els.cancelBtn.style.display = 'none';
+      
+      els.submitBtn.disabled = false;
+      els.submitBtn.innerHTML = '<i class="fas fa-plus"></i> Add Food Location';
     }
-    
-    // Map and other event handlers
+
+    // Listen for storage events to update changes across tabs (real-time within same browser)
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'foodLocations') {
+        loadFoodLocations();
+      }
+    });
+
+    // Map and event handlers
     window.onload = () => {
-      // Initialize map with responsive settings
+      // Initialize map with a default center (no geolocation)
       map = L.map('map', { center: [31.7683, 35.2137], zoom: 8, minZoom: 7, maxZoom: 18 });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
       
-      // Recalculate map size on window resize for responsiveness
+      // Recalculate map size on window resize
       window.addEventListener('resize', () => {
         map.invalidateSize();
       });
       
+      // Click on map to select a location (no automatic geolocation)
       map.on('click', e => {
         const { lat, lng } = e.latlng;
         selectedCoordinates = [lat, lng];
-        reverseGeocode(lat, lng);
+        // Optionally, you can remove reverse geocoding or keep it as is.
+        // Here we simply set the location input with coordinates.
+        els.location.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
         clearTemporaryMarkers();
         const popupEl = document.createElement('div');
         popupEl.className = 'popup-content';
@@ -414,28 +427,14 @@
         els.cancelBtn.style.display = 'none';
       });
       
-      // Initialize realtime updates with Supabase
-      initializeSupabaseRealtime();
-      fetchFoodLocations();
+      // Load stored food locations on startup
+      loadFoodLocations();
       
       // Remove expired locations every minute
-      setInterval(() => {
-        const now = Date.now();
-        foodLocations.filter(entry => entry.expiresAt < now)
-          .forEach(entry => deleteFoodLocation(entry.id));
-      }, 60000);
-      
-      // Locate mobile user's position and add a marker
-      map.locate({ setView: true, maxZoom: 16 });
-      map.on('locationfound', e => {
-        L.marker(e.latlng).addTo(map)
-          .bindPopup("You are here").openPopup();
-      });
-      map.on('locationerror', e => {
-        console.error("Location error:", e.message);
-      });
+      setInterval(removeExpiredLocations, 60000);
     };
-    
+
+    // Search address using Nominatim (remains as before)
     function searchAddress(query) {
       if (!query.toLowerCase().includes('israel')) query += ' Israel';
       fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=il&limit=5`)
@@ -463,7 +462,7 @@
           els.searchResults.classList.add('active');
         });
     }
-    
+
     function selectSearchResult(i) {
       const result = searchResults[i];
       els.location.value = result.display_name;
@@ -489,89 +488,6 @@
       popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
       map.setView([lat, lng], 15);
       els.cancelBtn.style.display = 'block';
-    }
-    
-    function reverseGeocode(lat, lng) {
-      els.loadingSpinner.style.display = 'inline-block';
-      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
-        .then(res => res.json())
-        .then(data => {
-          els.location.value = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-          els.loadingSpinner.style.display = 'none';
-        })
-        .catch(() => {
-          els.location.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-          els.loadingSpinner.style.display = 'none';
-        });
-    }
-    
-    async function uploadImage(file, id) {
-      if (!file) return null;
-      try {
-        const filePath = `${id}/${file.name}`;
-        let { error } = await fetch(`https://your-server.com/api/upload`, {
-          method: 'POST',
-          body: file,
-          headers: { 'Content-Type': file.type }
-        });
-        if (error) throw error;
-        const publicUrl = `https://your-server.com/uploads/${filePath}`;
-        return publicUrl;
-      } catch (e) {
-        return null;
-      }
-    }
-    
-    async function addNewFoodEntry() {
-      const loc = els.location.value, food = els.food.value, amount = els.amount.value;
-      if (!loc || !food || !amount) { alert('Please fill in all fields!'); return; }
-      if (!selectedCoordinates) { alert('Please select a location on the map or search for an address'); return; }
-      
-      els.submitBtn.disabled = true;
-      els.submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
-      
-      const now = Date.now();
-      try {
-        let imageUrl = null;
-        if (selectedImage) imageUrl = await uploadImage(selectedImage, now.toString());
-        
-        const entry = {
-          location: loc,
-          food,
-          amount: parseInt(amount),
-          coordinates: { lat: selectedCoordinates[0], lng: selectedCoordinates[1] },
-          timestamp: now,
-          expiresAt: now + (24 * 60 * 60 * 1000),
-          imageUrl
-        };
-        
-        const res = await fetch('https://your-server.com/api/add_location', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(entry)
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error('Error adding entry');
-        
-        els.location.value = '';
-        els.food.value = '';
-        els.amount.value = '1';
-        removeImagePreview();
-        selectedCoordinates = null;
-        clearTemporaryMarkers();
-        els.cancelBtn.style.display = 'none';
-        
-        if (!foodLocations.find(loc => loc.id === data.id)) {
-          foodLocations.push(data);
-          addMarkerForLocation(data);
-          updateFoodList();
-        }
-      } catch (e) {
-        alert("Error adding food location. Please try again.");
-      } finally {
-        els.submitBtn.disabled = false;
-        els.submitBtn.innerHTML = '<i class="fas fa-plus"></i> Add Food Location';
-      }
     }
   </script>
 </body>
