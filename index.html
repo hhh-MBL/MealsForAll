@@ -9,6 +9,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    /* Styles remain the same */
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
     body { background: #f8f9fa; }
     .app-container { max-width: 1200px; margin: auto; padding: 1rem; }
@@ -171,9 +172,11 @@
       selectedImage = null;
     };
     
+    // Realtime subscription: update map markers and list on INSERT, DELETE, UPDATE
     function initializeSupabaseRealtime() {
       if (supabaseChannel) supabaseChannel.unsubscribe();
       supabaseChannel = sb.channel('public:food_locations');
+      
       supabaseChannel
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'food_locations' }, payload => {
           const newEntry = payload.new;
@@ -274,6 +277,7 @@
         els.cancelBtn.style.display = 'none';
       });
       
+      // Initialize realtime updates so all users see changes live.
       initializeSupabaseRealtime();
       fetchFoodLocations();
       
