@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,7 +9,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* Old CSS kept */
+    /* Old CSS preserved */
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
     body { background:#f8f9fa; }
     .app-container { max-width:1200px; margin:auto; padding:1rem; }
@@ -62,63 +62,64 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- Logo name remains in English -->
+    <!-- Logo remains in English -->
     <h1 class="app-title">MealsForAll</h1>
     <div style="margin-bottom: 1rem; text-align: center;">
-      <a href="login.html">Login</a> | <a href="register.html">Register</a>
+      <a href="login.html">התחברות</a> | <a href="register.html">הרשמה</a>
     </div>
     <div class="main-layout">
       <div class="sidebar">
         <div>
-          <h2 style="margin-bottom:1rem; font-size:1.2rem;">Add Food Location</h2>
+          <h2 style="margin-bottom:1rem; font-size:1.2rem;">הוסף מיקום מזון</h2>
+          <!-- Note: The auto-complete elements have been removed -->
           <div class="form-group">
-            <label for="location">Location</label>
-            <!-- No auto-complete element -->
+            <label for="location">מיקום</label>
             <div class="input-with-icon" style="position:relative;">
               <i class="fas fa-map-marker-alt"></i>
-              <input type="text" id="location" placeholder="Enter full address or click on map">
+              <input type="text" id="location" placeholder="הזן כתובת מלאה" />
+              <div id="loading-spinner" class="loading-spinner"></div>
             </div>
           </div>
           <div class="form-group">
-            <label for="food">Food Type</label>
+            <label for="food">סוג מזון</label>
             <div class="input-with-icon">
               <i class="fas fa-utensils"></i>
-              <input type="text" id="food" placeholder="What food is available here?">
+              <input type="text" id="food" placeholder="איזה מזון זמין כאן?" />
             </div>
           </div>
           <div class="form-group">
-            <label for="amount">Amount</label>
+            <label for="amount">כמות</label>
             <div class="input-with-icon">
               <i class="fas fa-hashtag"></i>
-              <input type="number" id="amount" min="1" value="1">
+              <input type="number" id="amount" min="1" value="1" />
             </div>
           </div>
           <div class="form-group">
-            <label>Add Photo (optional)</label>
+            <label>הוסף תמונה (אופציונלי)</label>
             <div class="image-upload">
               <button class="upload-btn">
-                <i class="fas fa-camera"></i> Upload photo
-                <input type="file" id="food-image" accept="image/*">
+                <i class="fas fa-camera"></i> העלה תמונה
+                <input type="file" id="food-image" accept="image/*" />
               </button>
               <div class="image-container">
-                <img id="image-preview" class="image-preview" alt="Preview">
+                <img id="image-preview" class="image-preview" alt="תצוגה מקדימה" />
                 <span id="remove-image" class="remove-image">&times;</span>
               </div>
             </div>
           </div>
           <div class="form-group button-group">
-            <button id="submit-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Add Food Location</button>
-            <button id="cancel-btn" class="btn btn-danger"><i class="fas fa-times"></i> Cancel</button>
+            <button id="submit-btn" class="btn btn-primary"><i class="fas fa-plus"></i> הוסף מיקום מזון</button>
+            <button id="cancel-btn" class="btn btn-danger"><i class="fas fa-times"></i> ביטול</button>
           </div>
         </div>
         <div class="food-entries">
           <div class="entries-title">
-            <h2 style="font-size:1.1rem;">Available Food Locations</h2>
+            <h2 style="font-size:1.1rem;">מיקומי מזון זמינים</h2>
             <span id="entries-count" class="entries-counter">0</span>
           </div>
           <div id="empty-state" class="empty-state">
             <i class="fas fa-map" style="display:block; margin-bottom:0.5rem;"></i>
-            <p>No food locations available.</p>
+            <p>אין מיקומי מזון זמינים.</p>
           </div>
           <ul id="food-list" class="food-list"></ul>
         </div>
@@ -127,16 +128,16 @@
     </div>
   </div>
   <script>
-    // Use sessionStorage for ephemeral sessions (users can publish places without being registered)
+    // Supabase Setup
+    const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
+    const sb = supabase.createClient(supabaseUrl, supabaseKey);
+    
+    // Use sessionStorage for temporary anonymous session
     if (!sessionStorage.getItem('currentUserId')) {
       sessionStorage.setItem('currentUserId', 'user_' + Math.random().toString(36).substr(2, 9));
     }
     let currentUserId = sessionStorage.getItem('currentUserId');
-    
-    // Supabase setup
-    const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
-    const sb = supabase.createClient(supabaseUrl, supabaseKey);
     
     let map, markers = {}, selectedCoordinates = null, foodLocations = [], selectedImage = null;
     const els = {
@@ -148,6 +149,7 @@
       removeImage: document.getElementById('remove-image'),
       submitBtn: document.getElementById('submit-btn'),
       cancelBtn: document.getElementById('cancel-btn'),
+      loadingSpinner: document.getElementById('loading-spinner'),
       foodList: document.getElementById('food-list'),
       entriesCount: document.getElementById('entries-count'),
       emptyState: document.getElementById('empty-state')
@@ -162,11 +164,11 @@
       iconAnchor: [24, 24]
     });
     
-    const clearTemporaryMarkers = () => {
-      if (markers.temp) {
-        map.removeLayer(markers.temp);
-        delete markers.temp;
-      }
+    const clearTemporaryMarkers = () => { 
+      if (markers.temp) { 
+        map.removeLayer(markers.temp); 
+        delete markers.temp; 
+      } 
     };
     
     function removeImagePreview() {
@@ -180,10 +182,10 @@
       if (this.files && this.files[0]) {
         selectedImage = this.files[0];
         let reader = new FileReader();
-        reader.onload = e => {
-          els.imagePreview.src = e.target.result;
-          els.imagePreview.style.display = 'block';
-          els.removeImage.style.display = 'block';
+        reader.onload = e => { 
+          els.imagePreview.src = e.target.result; 
+          els.imagePreview.style.display = 'block'; 
+          els.removeImage.style.display = 'block'; 
         };
         reader.readAsDataURL(selectedImage);
       }
@@ -199,7 +201,6 @@
     });
     
     window.onload = async () => {
-      // If user is logged in via Supabase Auth, update currentUserId (else use sessionStorage)
       const { data: { session } } = await sb.auth.getSession();
       if (session && session.user) {
         currentUserId = session.user.id;
@@ -215,7 +216,7 @@
         clearTemporaryMarkers();
         const popupEl = document.createElement('div');
         popupEl.className = 'popup-content';
-        popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>Selected Location</h4></div>
+        popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>Location Selected</h4></div>
           <div class="popup-body"><p>${lat.toFixed(5)}, ${lng.toFixed(5)}</p></div>`;
         const marker = L.marker([lat, lng], { icon: createMarkerIcon(true) }).addTo(map);
         marker.isTemporary = true; markers.temp = marker;
@@ -264,20 +265,22 @@
     };
     
     async function reverseGeocode(lat, lng) {
+      els.loadingSpinner.style.display = 'inline-block';
       try {
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
         const data = await res.json();
-        // Use full address from display_name
         els.location.value = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        els.loadingSpinner.style.display = 'none';
       } catch (err) {
         els.location.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        els.loadingSpinner.style.display = 'none';
       }
     }
     
     async function uploadImage(file, id) {
       if (!file) return null;
       if (!file.type.startsWith("image/")) {
-        alert("The selected file is not an image.");
+        alert("The file provided is not an image.");
         return null;
       }
       try {
@@ -292,7 +295,7 @@
         const { data: publicData, error: publicError } = sb.storage.from('food_images').getPublicUrl(uniqueFileName);
         if (publicError) {
           console.error("Error getting image URL:", publicError);
-          alert("Error retrieving image URL.");
+          alert("Error getting image URL.");
           return null;
         }
         return publicData.publicUrl;
@@ -312,7 +315,7 @@
         return;
       }
       if (!selectedCoordinates) {
-        alert('Please select a location on the map or enter a full address.');
+        alert('Please select a location on the map or type the full address.');
         return;
       }
       const now = Date.now();
@@ -385,7 +388,7 @@
       const popupEl = document.createElement('div');
       popupEl.className = 'popup-content';
       popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>${entry.food}</h4></div>
-        <div class="popup-body"><p>${entry.location}</p><p>Amount: ${entry.amount}</p>
+        <div class="popup-body"><p>${entry.location}</p><p>Quantity: ${entry.amount}</p>
         <p style="font-size:0.8rem;color:#6c757d;">Expires in: ${timeRemaining}</p>${imageHtml}</div>
         <div class="popup-footer">${deleteButtonHtml}</div>`;
       marker.bindPopup(popupEl);
