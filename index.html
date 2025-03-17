@@ -9,7 +9,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* Old CSS preserved */
+    /* Preserved CSS */
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
     body { background:#f8f9fa; }
     .app-container { max-width:1200px; margin:auto; padding:1rem; }
@@ -71,9 +71,9 @@
       <div class="sidebar">
         <div>
           <h2 style="margin-bottom:1rem; font-size:1.2rem;">הוסף מיקום מזון</h2>
-          <!-- Note: The auto-complete elements have been removed -->
           <div class="form-group">
             <label for="location">מיקום</label>
+            <!-- Auto-completion removed; full address is manually entered -->
             <div class="input-with-icon" style="position:relative;">
               <i class="fas fa-map-marker-alt"></i>
               <input type="text" id="location" placeholder="הזן כתובת מלאה" />
@@ -133,11 +133,8 @@
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
     const sb = supabase.createClient(supabaseUrl, supabaseKey);
     
-    // Use sessionStorage for temporary anonymous session
-    if (!sessionStorage.getItem('currentUserId')) {
-      sessionStorage.setItem('currentUserId', 'user_' + Math.random().toString(36).substr(2, 9));
-    }
-    let currentUserId = sessionStorage.getItem('currentUserId');
+    // Only allow publishing if a user is logged in.
+    let currentUserId = null;
     
     let map, markers = {}, selectedCoordinates = null, foodLocations = [], selectedImage = null;
     const els = {
@@ -201,9 +198,16 @@
     });
     
     window.onload = async () => {
+      // Check authentication session.
       const { data: { session } } = await sb.auth.getSession();
       if (session && session.user) {
         currentUserId = session.user.id;
+        els.submitBtn.disabled = false;
+      } else {
+        // Restrict publishing if not logged in.
+        currentUserId = null;
+        els.submitBtn.disabled = true;
+        els.submitBtn.textContent = "Log in to publish";
       }
       
       map = L.map('map', { center: [31.7683, 35.2137], zoom: 8, minZoom: 7, maxZoom: 18 });
@@ -316,6 +320,10 @@
       }
       if (!selectedCoordinates) {
         alert('Please select a location on the map or type the full address.');
+        return;
+      }
+      if (!currentUserId) {
+        alert('You must be logged in to publish a location.');
         return;
       }
       const now = Date.now();
