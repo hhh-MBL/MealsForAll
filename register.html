@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <title>MealsForAll - הרשמה</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0; 
+      padding: 0;
+      background: #f8f9fa;
+      direction: rtl;
+    }
+    .container {
+      max-width: 400px;
+      margin: 2rem auto;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+    h1 {
+      text-align: center;
+      color: #4361ee;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.3rem;
+      font-weight: 500;
+    }
+    input[type="email"], input[type="password"] {
+      width: 100%;
+      padding: 0.7rem;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      font-size: 1rem;
+      text-align: right;
+    }
+    button {
+      width: 100%;
+      padding: 0.7rem;
+      background: #4361ee;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .link {
+      text-align: center;
+      margin-top: 1rem;
+    }
+    .link a {
+      color: #4361ee;
+      text-decoration: none;
+      font-weight: 600;
+      margin: 0 8px;
+    }
+    .error {
+      color: #ef233c;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MealsForAll</h1>
+    <h2 style="text-align:center;">הרשמה</h2>
+    <div id="error-message" class="error"></div>
+    <div class="form-group">
+      <label for="email">אימייל</label>
+      <input type="email" id="email" placeholder="name@example.com" />
+    </div>
+    <div class="form-group">
+      <label for="password">סיסמה</label>
+      <input type="password" id="password" placeholder="********" />
+    </div>
+    <button id="register-btn">הרשם</button>
+    <div class="link">
+      <a href="login.html">כבר רשום? התחבר</a> | 
+      <a href="index.html">חזרה לעמוד הראשי</a>
+    </div>
+  </div>
+
+  <script>
+    const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
+    const sb = supabase.createClient(supabaseUrl, supabaseKey);
+
+    const registerBtn = document.getElementById('register-btn');
+    const errorMsg = document.getElementById('error-message');
+
+    registerBtn.addEventListener('click', async () => {
+      errorMsg.textContent = '';
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      if (!email || !password) {
+        errorMsg.textContent = 'אנא מלא אימייל וסיסמה.';
+        return;
+      }
+      // Try signing up with Supabase
+      const { data, error } = await sb.auth.signUp({ email, password });
+      if (error) {
+        errorMsg.textContent = 'שגיאה בהרשמה: ' + error.message;
+      } else {
+        // On success, redirect to index.html
+        window.location.href = 'index.html';
+      }
+    });
+  </script>
+</body>
+</html>
