@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,7 +9,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* Old CSS (unchanged) */
+    /* Old CSS kept */
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
     body { background:#f8f9fa; }
     .app-container { max-width:1200px; margin:auto; padding:1rem; }
@@ -58,72 +58,67 @@
     .upload-btn .fa-camera { font-size:1.5rem; margin-right:0.3rem; }
     .food-image-thumbnail { width:50px; height:50px; border-radius:4px; margin-left:8px; object-fit:cover; }
     .popup-image { width:100%; max-height:150px; object-fit:cover; border-radius:6px; margin-top:8px; }
-    .search-results { position:absolute; top:100%; left:0; width:100%; background:#fff; border:1px solid #dee2e6; border-top:none; border-radius:0 0 8px 8px; max-height:200px; overflow-y:auto; box-shadow:0 4px 8px rgba(0,0,0,0.1); z-index:1000; }
-    .search-item { padding:0.5rem; cursor:pointer; }
-    .search-item:hover { background:#f1f1f1; }
   </style>
 </head>
 <body>
   <div class="app-container">
     <!-- Logo name remains in English -->
     <h1 class="app-title">MealsForAll</h1>
-    <!-- Optional links for login/register -->
     <div style="margin-bottom: 1rem; text-align: center;">
-      <a href="login.html">התחברות</a> | <a href="register.html">הרשמה</a>
+      <a href="login.html">Login</a> | <a href="register.html">Register</a>
     </div>
     <div class="main-layout">
       <div class="sidebar">
         <div>
-          <h2 style="margin-bottom:1rem; font-size:1.2rem;">הוסף מיקום מזון</h2>
+          <h2 style="margin-bottom:1rem; font-size:1.2rem;">Add Food Location</h2>
           <div class="form-group">
-            <label for="location">מיקום</label>
+            <label for="location">Location</label>
+            <!-- No auto-complete element -->
             <div class="input-with-icon" style="position:relative;">
               <i class="fas fa-map-marker-alt"></i>
-              <input type="text" id="location" placeholder="הזן כתובת או לחץ על המפה">
-              <div id="loading-spinner" class="loading-spinner"></div>
-              <div id="search-results" class="search-results"></div>
+              <input type="text" id="location" placeholder="Enter full address or click on map">
             </div>
           </div>
           <div class="form-group">
-            <label for="food">סוג מזון</label>
+            <label for="food">Food Type</label>
             <div class="input-with-icon">
               <i class="fas fa-utensils"></i>
-              <input type="text" id="food" placeholder="איזה מזון זמין כאן?">
+              <input type="text" id="food" placeholder="What food is available here?">
             </div>
           </div>
           <div class="form-group">
-            <label for="amount">כמות</label>
+            <label for="amount">Amount</label>
             <div class="input-with-icon">
               <i class="fas fa-hashtag"></i>
               <input type="number" id="amount" min="1" value="1">
             </div>
           </div>
           <div class="form-group">
-            <label>הוסף תמונה (אופציונלי)</label>
+            <label>Add Photo (optional)</label>
             <div class="image-upload">
               <button class="upload-btn">
-                <i class="fas fa-camera"></i> העלה תמונה
+                <i class="fas fa-camera"></i> Upload photo
                 <input type="file" id="food-image" accept="image/*">
               </button>
               <div class="image-container">
-                <img id="image-preview" class="image-preview" alt="תצוגה מקדימה">
+                <img id="image-preview" class="image-preview" alt="Preview">
                 <span id="remove-image" class="remove-image">&times;</span>
               </div>
             </div>
           </div>
           <div class="form-group button-group">
-            <button id="submit-btn" class="btn btn-primary"><i class="fas fa-plus"></i> הוסף מיקום מזון</button>
-            <button id="cancel-btn" class="btn btn-danger"><i class="fas fa-times"></i> ביטול</button>
+            <button id="submit-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Add Food Location</button>
+            <button id="cancel-btn" class="btn btn-danger"><i class="fas fa-times"></i> Cancel</button>
           </div>
         </div>
         <div class="food-entries">
           <div class="entries-title">
-            <h2 style="font-size:1.1rem;">מיקומי מזון זמינים</h2>
+            <h2 style="font-size:1.1rem;">Available Food Locations</h2>
             <span id="entries-count" class="entries-counter">0</span>
           </div>
           <div id="empty-state" class="empty-state">
             <i class="fas fa-map" style="display:block; margin-bottom:0.5rem;"></i>
-            <p>אין מיקומי מזון זמינים.</p>
+            <p>No food locations available.</p>
           </div>
           <ul id="food-list" class="food-list"></ul>
         </div>
@@ -132,15 +127,18 @@
     </div>
   </div>
   <script>
-    // Supabase credentials and client setup
+    // Use sessionStorage for ephemeral sessions (users can publish places without being registered)
+    if (!sessionStorage.getItem('currentUserId')) {
+      sessionStorage.setItem('currentUserId', 'user_' + Math.random().toString(36).substr(2, 9));
+    }
+    let currentUserId = sessionStorage.getItem('currentUserId');
+    
+    // Supabase setup
     const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
     const sb = supabase.createClient(supabaseUrl, supabaseKey);
     
-    // Default to "אנונימי" if not logged in
-    let currentUserId = "אנונימי";
-    
-    let map, markers = {}, selectedCoordinates = null, debounceTimer, searchResults = [], foodLocations = [], selectedImage = null;
+    let map, markers = {}, selectedCoordinates = null, foodLocations = [], selectedImage = null;
     const els = {
       location: document.getElementById('location'),
       food: document.getElementById('food'),
@@ -150,17 +148,13 @@
       removeImage: document.getElementById('remove-image'),
       submitBtn: document.getElementById('submit-btn'),
       cancelBtn: document.getElementById('cancel-btn'),
-      searchResults: document.getElementById('search-results'),
-      loadingSpinner: document.getElementById('loading-spinner'),
       foodList: document.getElementById('food-list'),
       entriesCount: document.getElementById('entries-count'),
       emptyState: document.getElementById('empty-state')
     };
     
-    // Format time helper
     const formatTime = ms => `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
     
-    // Create marker icon
     const createMarkerIcon = isTemp => L.divIcon({
       className: `custom-marker${isTemp ? ' marker-temp' : ''}`,
       html: `<i class="fas fa-${isTemp ? 'crosshairs' : 'utensils'}"></i>`,
@@ -168,15 +162,13 @@
       iconAnchor: [24, 24]
     });
     
-    // Remove temporary marker
-    const clearTemporaryMarkers = () => { 
-      if (markers.temp) { 
-        map.removeLayer(markers.temp); 
-        delete markers.temp; 
-      } 
+    const clearTemporaryMarkers = () => {
+      if (markers.temp) {
+        map.removeLayer(markers.temp);
+        delete markers.temp;
+      }
     };
     
-    // Remove image preview
     function removeImagePreview() {
       els.imagePreview.style.display = 'none';
       els.imagePreview.src = '';
@@ -184,32 +176,14 @@
       selectedImage = null;
     }
     
-    // Handle location input (auto-completion)
-    els.location.addEventListener('input', function () {
-      const query = this.value.trim();
-      clearTimeout(debounceTimer);
-      if (query.length < 3) {
-        els.searchResults.classList.remove('active');
-        return;
-      }
-      els.loadingSpinner.style.display = 'inline-block';
-      debounceTimer = setTimeout(() => searchAddress(query), 500);
-    });
-    
-    document.addEventListener('click', e => {
-      if (!e.target.closest('#location') && !e.target.closest('#search-results'))
-        els.searchResults.classList.remove('active');
-    });
-    
-    // Image input change: show preview
     els.foodImage.addEventListener('change', function () {
       if (this.files && this.files[0]) {
         selectedImage = this.files[0];
         let reader = new FileReader();
-        reader.onload = e => { 
-          els.imagePreview.src = e.target.result; 
-          els.imagePreview.style.display = 'block'; 
-          els.removeImage.style.display = 'block'; 
+        reader.onload = e => {
+          els.imagePreview.src = e.target.result;
+          els.imagePreview.style.display = 'block';
+          els.removeImage.style.display = 'block';
         };
         reader.readAsDataURL(selectedImage);
       }
@@ -224,9 +198,8 @@
       els.cancelBtn.style.display = 'none';
     });
     
-    // Initialize map
     window.onload = async () => {
-      // If user is logged in, update currentUserId
+      // If user is logged in via Supabase Auth, update currentUserId (else use sessionStorage)
       const { data: { session } } = await sb.auth.getSession();
       if (session && session.user) {
         currentUserId = session.user.id;
@@ -242,7 +215,7 @@
         clearTemporaryMarkers();
         const popupEl = document.createElement('div');
         popupEl.className = 'popup-content';
-        popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>מיקום נבחר</h4></div>
+        popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>Selected Location</h4></div>
           <div class="popup-body"><p>${lat.toFixed(5)}, ${lng.toFixed(5)}</p></div>`;
         const marker = L.marker([lat, lng], { icon: createMarkerIcon(true) }).addTo(map);
         marker.isTemporary = true; markers.temp = marker;
@@ -254,7 +227,6 @@
       setTimeout(() => map.invalidateSize(), 100);
       await fetchFoodLocations();
       
-      // Subscribe to real-time updates
       sb.channel('public:food_locations')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'food_locations' }, payload => {
           let newEntry = payload.new;
@@ -291,84 +263,21 @@
       }, 60000);
     };
     
-    // Auto-completion: short address (only street and city)
-    function getShortAddress(result) {
-      if (!result.address) return result.display_name || '';
-      const addr = result.address;
-      const road = addr.road || '';
-      const houseNumber = addr.house_number || '';
-      let city = addr.city || addr.town || addr.village || '';
-      city = city.replace(/\d+/g, '').trim();
-      let streetPart = road;
-      if (houseNumber) { streetPart += streetPart ? ' ' + houseNumber : houseNumber; }
-      return (streetPart && city) ? streetPart + ', ' + city : (streetPart || city).trim();
-    }
-    
-    async function searchAddress(query) {
-      if (!query.toLowerCase().includes('israel')) query += ' Israel';
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=il&limit=5`);
-        const data = await res.json();
-        searchResults = data;
-        els.loadingSpinner.style.display = 'none';
-        els.searchResults.innerHTML = '';
-        if (data.length === 0) {
-          els.searchResults.innerHTML = '<div class="search-item">לא נמצאו תוצאות</div>';
-        } else {
-          data.forEach((result, i) => {
-            const item = document.createElement('div');
-            item.className = 'search-item';
-            item.textContent = getShortAddress(result);
-            item.addEventListener('click', () => selectSearchResult(i));
-            els.searchResults.appendChild(item);
-          });
-        }
-        els.searchResults.classList.add('active');
-      } catch (err) {
-        els.loadingSpinner.style.display = 'none';
-        els.searchResults.innerHTML = '<div class="search-item">שגיאה בחיפוש כתובת</div>';
-        els.searchResults.classList.add('active');
-      }
-    }
-    
-    function selectSearchResult(i) {
-      const result = searchResults[i];
-      const shortAddr = getShortAddress(result);
-      els.location.value = shortAddr;
-      els.searchResults.innerHTML = '';
-      els.searchResults.classList.remove('active');
-      const lat = parseFloat(result.lat), lng = parseFloat(result.lon);
-      selectedCoordinates = [lat, lng];
-      clearTemporaryMarkers();
-      const popupEl = document.createElement('div');
-      popupEl.className = 'popup-content';
-      popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>מיקום נבחר</h4></div>
-        <div class="popup-body"><p>${shortAddr}</p></div>`;
-      const marker = L.marker([lat, lng], { icon: createMarkerIcon(true) }).addTo(map);
-      marker.isTemporary = true; markers.temp = marker;
-      marker.bindPopup(popupEl).openPopup();
-      popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
-      map.setView([lat, lng], 15);
-      els.cancelBtn.style.display = 'block';
-    }
-    
     async function reverseGeocode(lat, lng) {
-      els.loadingSpinner.style.display = 'inline-block';
       try {
         const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
         const data = await res.json();
-        els.location.value = getShortAddress(data) || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        els.loadingSpinner.style.display = 'none';
+        // Use full address from display_name
+        els.location.value = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
       } catch (err) {
         els.location.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        els.loadingSpinner.style.display = 'none';
       }
     }
     
     async function uploadImage(file, id) {
       if (!file) return null;
       if (!file.type.startsWith("image/")) {
-        alert("התבקש קובץ שאינו תמונה.");
+        alert("The selected file is not an image.");
         return null;
       }
       try {
@@ -376,20 +285,20 @@
         const uniqueFileName = `${id}_${Date.now()}_${Math.random().toString(36).substr(2,5)}.${fileExtension}`;
         const { data, error } = await sb.storage.from('food_images').upload(uniqueFileName, file, { cacheControl: '3600', upsert: false });
         if (error) {
-          console.error("שגיאה בהעלאת התמונה:", error);
-          alert("שגיאה בהעלאת התמונה.");
+          console.error("Error uploading image:", error);
+          alert("Error uploading image.");
           return null;
         }
         const { data: publicData, error: publicError } = sb.storage.from('food_images').getPublicUrl(uniqueFileName);
         if (publicError) {
-          console.error("שגיאה בקבלת כתובת התמונה:", publicError);
-          alert("שגיאה בקבלת כתובת התמונה.");
+          console.error("Error getting image URL:", publicError);
+          alert("Error retrieving image URL.");
           return null;
         }
         return publicData.publicUrl;
       } catch (e) {
         console.error("Exception during image upload:", e);
-        alert("שגיאה בהעלאת התמונה.");
+        alert("Error uploading image.");
         return null;
       }
     }
@@ -399,11 +308,11 @@
       const food = els.food.value.trim();
       const amount = els.amount.value.trim();
       if (!loc || !food || !amount) {
-        alert('אנא מלא את כל השדות!');
+        alert('Please fill in all fields!');
         return;
       }
       if (!selectedCoordinates) {
-        alert('אנא בחר מיקום במפה או חפש כתובת');
+        alert('Please select a location on the map or enter a full address.');
         return;
       }
       const now = Date.now();
@@ -422,7 +331,7 @@
         };
         console.log("Inserting entry:", entry);
         const { error } = await sb.from('food_locations').insert([entry]);
-        if (error) { console.error("Insert error details:", error); throw error; }
+        if (error) { console.error("Insert error:", error); throw error; }
         els.location.value = '';
         els.food.value = '';
         els.amount.value = '1';
@@ -432,7 +341,7 @@
         els.cancelBtn.style.display = 'none';
       } catch (e) {
         console.error("Error adding food location:", e);
-        alert("שגיאה בהוספת מיקום המזון. אנא נסה שוב.");
+        alert("Error adding food location. Please try again.");
       }
     }
     
@@ -441,8 +350,8 @@
         const { error } = await sb.from('food_locations').delete().eq('id', id);
         if (error) throw error;
       } catch (e) {
-        console.error("שגיאה במחיקת מיקום המזון:", e);
-        alert("שגיאה במחיקת מיקום המזון. אנא נסה שוב.");
+        console.error("Error deleting food location:", e);
+        alert("Error deleting food location. Please try again.");
       }
     }
     
@@ -455,7 +364,7 @@
         updateMapMarkers();
         updateFoodList();
       } catch (e) {
-        console.error("שגיאה בטעינת מיקומי המזון:", e);
+        console.error("Error fetching food locations:", e);
       }
     }
     
@@ -470,20 +379,20 @@
       markers[entry.id] = marker;
       const timeRemaining = formatTime(entry.expiresAt - Date.now());
       const deleteButtonHtml = (entry.createdBy === currentUserId)
-        ? `<button class="delete-btn"><i class="fas fa-trash"></i> מחק</button>`
+        ? `<button class="delete-btn"><i class="fas fa-trash"></i> Delete</button>`
         : '';
-      const imageHtml = entry.imageUrl ? `<img src="${entry.imageUrl}" class="popup-image" alt="תמונת מזון">` : '';
+      const imageHtml = entry.imageUrl ? `<img src="${entry.imageUrl}" class="popup-image" alt="Food Image">` : '';
       const popupEl = document.createElement('div');
       popupEl.className = 'popup-content';
       popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>${entry.food}</h4></div>
-        <div class="popup-body"><p>${entry.location}</p><p>כמות: ${entry.amount}</p>
-        <p style="font-size:0.8rem;color:#6c757d;">פג תוקף בעוד: ${timeRemaining}</p>${imageHtml}</div>
+        <div class="popup-body"><p>${entry.location}</p><p>Amount: ${entry.amount}</p>
+        <p style="font-size:0.8rem;color:#6c757d;">Expires in: ${timeRemaining}</p>${imageHtml}</div>
         <div class="popup-footer">${deleteButtonHtml}</div>`;
       marker.bindPopup(popupEl);
       popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
       if (deleteButtonHtml) {
         popupEl.querySelector('.delete-btn').addEventListener('click', () => {
-          if (confirm('האם אתה בטוח שברצונך למחוק מיקום המזון הזה?')) {
+          if (confirm('Are you sure you want to delete this food location?')) {
             deleteFoodLocation(entry.id);
             marker.closePopup();
           }
@@ -497,14 +406,14 @@
       els.emptyState.style.display = foodLocations.length === 0 ? 'block' : 'none';
       foodLocations.sort((a, b) => b.timestamp - a.timestamp).forEach(entry => {
         const timeRemaining = formatTime(entry.expiresAt - Date.now());
-        const imageElement = entry.imageUrl ? `<img src="${entry.imageUrl}" class="food-image-thumbnail" alt="תמונה ממוזון">` : '';
+        const imageElement = entry.imageUrl ? `<img src="${entry.imageUrl}" class="food-image-thumbnail" alt="Food Thumbnail">` : '';
         const listItem = document.createElement('li');
         listItem.className = 'food-item';
         listItem.dataset.id = entry.id;
         listItem.innerHTML = `<div>
             <div class="food-name">${entry.food}</div>
             <div class="food-location">${entry.location}</div>
-            <div class="expiry-info">פג תוקף בעוד: ${timeRemaining}</div>
+            <div class="expiry-info">Expires in: ${timeRemaining}</div>
           </div>
           <div style="display:flex;align-items:center;">
             <span class="food-amount">${entry.amount}</span>
