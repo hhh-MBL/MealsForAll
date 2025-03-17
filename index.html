@@ -9,10 +9,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
+    /* Old CSS (unchanged) */
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
-    body { background:#f8f9fa; direction: rtl; }
+    body { background:#f8f9fa; }
     .app-container { max-width:1200px; margin:auto; padding:1rem; }
-    .app-title { font-size:2rem; color:#4361ee; margin-bottom:1rem; text-align: center; }
+    .app-title { font-size:2rem; color:#4361ee; margin-bottom:1rem; }
     .main-layout { display:grid; grid-template-columns:280px 1fr; gap:1rem; height:calc(100vh - 100px); }
     @media (max-width:768px){ .main-layout { grid-template-columns:1fr; height:auto; } }
     .sidebar, #map-container, #map { border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.05); }
@@ -21,8 +22,8 @@
     .form-group { margin-bottom:1rem; }
     label { display:block; margin-bottom:0.3rem; font-weight:500; }
     .input-with-icon { position:relative; }
-    .input-with-icon i { position:absolute; right:0.7rem; top:50%; transform:translateY(-50%); color:#adb5bd; }
-    input { width:100%; padding:0.7rem 2rem 0.7rem 1rem; border:1px solid #dee2e6; border-radius:8px; text-align: right; }
+    .input-with-icon i { position:absolute; left:0.7rem; top:50%; transform:translateY(-50%); color:#adb5bd; }
+    input { width:100%; padding:0.7rem 1rem 0.7rem 2rem; border:1px solid #dee2e6; border-radius:8px; }
     input:focus { outline:none; border-color:#4361ee; }
     .btn { padding:0.7rem; border:none; border-radius:8px; font-weight:500; cursor:pointer; }
     .btn-primary { background:#4361ee; color:#fff; width:100%; }
@@ -37,43 +38,39 @@
     .food-name { font-weight:600; }
     .food-location { font-size:0.85rem; color:#6c757d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .food-amount { background:#4361ee; color:#fff; border-radius:12px; font-size:0.8rem; padding:2px 6px; margin-left:0.5rem; }
-    .loading-spinner { display:none; width:16px; height:16px; border:2px solid rgba(0,0,0,0.1); border-right-color:#4361ee; border-radius:50%; animation:spin 1s linear infinite; margin-left:8px; float: left; }
+    .loading-spinner { display:none; width:16px; height:16px; border:2px solid rgba(0,0,0,0.1); border-left-color:#4361ee; border-radius:50%; animation:spin 1s linear infinite; margin-left:8px; }
     @keyframes spin { to { transform:rotate(360deg); } }
     .custom-marker { display:flex; justify-content:center; align-items:center; font-size:28px; color:#fff; background:#4361ee; border-radius:50%; width:48px; height:48px; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
     .marker-temp { background:#ef233c; }
-    .popup-content { padding:8px; position:relative; max-width:250px; text-align: right; direction: rtl; }
+    .popup-content { padding:8px; position:relative; max-width:250px; }
     .popup-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
     .popup-header h4 { margin:0; font-size:1rem; }
     .popup-body p { margin:4px 0; }
-    .popup-footer { text-align:left; margin-top:8px; }
+    .popup-footer { text-align:right; margin-top:8px; }
     .close-popup { font-size:1.2rem; cursor:pointer; }
     .delete-btn { background:#ef233c; color:#fff; border:none; border-radius:4px; padding:4px 8px; font-size:0.8rem; cursor:pointer; }
-    .image-upload { display:flex; align-items:center; margin-bottom:1rem; justify-content: flex-end; }
-    .image-container { position:relative; display:inline-block; margin-left: 1rem; }
+    .image-upload { display:flex; align-items:center; margin-bottom:1rem; }
+    .image-container { position:relative; display:inline-block; }
     .image-preview { width:60px; height:60px; border-radius:8px; object-fit:cover; display:none; }
-    .remove-image { position:absolute; top:0; left:0; background:rgba(0,0,0,0.6); color:#fff; padding:2px 6px; font-size:1rem; cursor:pointer; display:none; }
+    .remove-image { position:absolute; top:0; right:0; background:rgba(0,0,0,0.6); color:#fff; padding:2px 6px; font-size:1rem; cursor:pointer; display:none; }
     .upload-btn { position:relative; overflow:hidden; background:#f8f9fa; color:#495057; padding:0.5rem; border:none; border-radius:8px; cursor:pointer; }
-    .upload-btn input[type=file] { position:absolute; right:0; top:0; opacity:0; width:100%; height:100%; cursor:pointer; }
-    .upload-btn .fa-camera { font-size:1.5rem; margin-left:0.3rem; }
+    .upload-btn input[type=file] { position:absolute; left:0; top:0; opacity:0; width:100%; height:100%; cursor:pointer; }
+    .upload-btn .fa-camera { font-size:1.5rem; margin-right:0.3rem; }
     .food-image-thumbnail { width:50px; height:50px; border-radius:4px; margin-left:8px; object-fit:cover; }
     .popup-image { width:100%; max-height:150px; object-fit:cover; border-radius:6px; margin-top:8px; }
-    .search-results { position:absolute; top:100%; right:0; width:100%; background:#fff; border:1px solid #dee2e6; border-top:none; border-radius:0 0 8px 8px; max-height:200px; overflow-y:auto; box-shadow:0 4px 8px rgba(0,0,0,0.1); z-index:1000; text-align: right; }
+    .search-results { position:absolute; top:100%; left:0; width:100%; background:#fff; border:1px solid #dee2e6; border-top:none; border-radius:0 0 8px 8px; max-height:200px; overflow-y:auto; box-shadow:0 4px 8px rgba(0,0,0,0.1); z-index:1000; }
     .search-item { padding:0.5rem; cursor:pointer; }
     .search-item:hover { background:#f1f1f1; }
-    .auth-links { margin-top:1rem; text-align:center; }
-    .auth-links a { margin:0 8px; color:#4361ee; text-decoration:none; font-weight:600; }
   </style>
 </head>
 <body>
   <div class="app-container">
     <!-- Logo name remains in English -->
     <h1 class="app-title">MealsForAll</h1>
-    
-    <div class="auth-links">
-      <!-- Links to Login and Register pages -->
+    <!-- Optional links for login/register -->
+    <div style="margin-bottom: 1rem; text-align: center;">
       <a href="login.html">התחברות</a> | <a href="register.html">הרשמה</a>
     </div>
-
     <div class="main-layout">
       <div class="sidebar">
         <div>
@@ -135,14 +132,15 @@
     </div>
   </div>
   <script>
-    // =============== Supabase Setup ===============
+    // Supabase credentials and client setup
     const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
+    const supabaseKey = 'YOUR_SUPABASE_KEY_HERE';
     const sb = supabase.createClient(supabaseUrl, supabaseKey);
-
+    
+    // Default to "אנונימי" if not logged in
+    let currentUserId = "אנונימי";
+    
     let map, markers = {}, selectedCoordinates = null, debounceTimer, searchResults = [], foodLocations = [], selectedImage = null;
-    let currentUserId = 'אנונימי'; // default if not logged in
-
     const els = {
       location: document.getElementById('location'),
       food: document.getElementById('food'),
@@ -158,121 +156,26 @@
       entriesCount: document.getElementById('entries-count'),
       emptyState: document.getElementById('empty-state')
     };
-
-    // =============== On Page Load ===============
-    window.onload = async () => {
-      // 1) Check if user is logged in with Supabase Auth
-      const { data: { session } } = await sb.auth.getSession();
-      if (session && session.user) {
-        currentUserId = session.user.id; 
-      }
-
-      // 2) Initialize map
-      map = L.map('map', { center: [31.7683, 35.2137], zoom: 8, minZoom: 7, maxZoom: 18 });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-      // 3) Map click event: select location
-      map.on('click', e => {
-        const { lat, lng } = e.latlng;
-        selectedCoordinates = [lat, lng];
-        reverseGeocode(lat, lng);
-        clearTemporaryMarkers();
-        const popupEl = document.createElement('div');
-        popupEl.className = 'popup-content';
-        popupEl.innerHTML = `
-          <div class="popup-header">
-            <span class="close-popup">&times;</span>
-            <h4>מיקום נבחר</h4>
-          </div>
-          <div class="popup-body">
-            <p>${lat.toFixed(5)}, ${lng.toFixed(5)}</p>
-          </div>
-        `;
-        const marker = L.marker([lat, lng], { icon: createMarkerIcon(true) }).addTo(map);
-        marker.isTemporary = true; 
-        markers.temp = marker;
-        marker.bindPopup(popupEl).openPopup();
-        popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
-        els.cancelBtn.style.display = 'block';
-      });
-
-      // Fix map size on load
-      setTimeout(() => map.invalidateSize(), 100);
-
-      // 4) Input events
-      els.location.addEventListener('input', handleLocationInput);
-      document.addEventListener('click', handleDocumentClick);
-      els.foodImage.addEventListener('change', handleImageChange);
-      els.removeImage.addEventListener('click', removeImagePreview);
-      els.submitBtn.addEventListener('click', addNewFoodEntry);
-      els.cancelBtn.addEventListener('click', clearSelection);
-
-      // 5) Fetch existing food locations
-      await fetchFoodLocations();
-
-      // 6) Subscribe to real-time changes in food locations
-      sb.channel('public:food_locations')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'food_locations' }, payload => {
-          let newEntry = payload.new;
-          if (!foodLocations.find(loc => loc.id === newEntry.id)) { 
-            foodLocations.push(newEntry); 
-            addMarkerForLocation(newEntry); 
-            updateFoodList(); 
-          }
-        })
-        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'food_locations' }, payload => {
-          let deleted = payload.old;
-          foodLocations = foodLocations.filter(loc => loc.id !== deleted.id);
-          if (markers[deleted.id]) { 
-            map.removeLayer(markers[deleted.id]); 
-            delete markers[deleted.id]; 
-          }
-          updateFoodList();
-        })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'food_locations' }, payload => {
-          let updated = payload.new;
-          foodLocations = foodLocations.map(loc => loc.id === updated.id ? updated : loc);
-          if (markers[updated.id]) { 
-            map.removeLayer(markers[updated.id]); 
-            delete markers[updated.id]; 
-          }
-          addMarkerForLocation(updated);
-          updateFoodList();
-        })
-        .subscribe();
-
-      // 7) Automatically delete expired locations every minute
-      setInterval(() => {
-        const now = Date.now();
-        foodLocations.filter(entry => entry.expiresAt < now).forEach(entry => deleteFoodLocation(entry.id));
-      }, 60000);
-    };
-
-    // =============== Helper Functions ===============
-    // Create custom marker
-    const createMarkerIcon = (isTemp=false) => L.divIcon({
+    
+    // Format time helper
+    const formatTime = ms => `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
+    
+    // Create marker icon
+    const createMarkerIcon = isTemp => L.divIcon({
       className: `custom-marker${isTemp ? ' marker-temp' : ''}`,
       html: `<i class="fas fa-${isTemp ? 'crosshairs' : 'utensils'}"></i>`,
       iconSize: [48, 48],
       iconAnchor: [24, 24]
     });
-
-    // Remove temp marker
-    const clearTemporaryMarkers = () => {
-      if (markers.temp) {
-        map.removeLayer(markers.temp);
-        delete markers.temp;
-      }
+    
+    // Remove temporary marker
+    const clearTemporaryMarkers = () => { 
+      if (markers.temp) { 
+        map.removeLayer(markers.temp); 
+        delete markers.temp; 
+      } 
     };
-
-    // Clear form selection
-    function clearSelection() {
-      clearTemporaryMarkers();
-      selectedCoordinates = null;
-      els.location.value = '';
-      els.cancelBtn.style.display = 'none';
-    }
-
+    
     // Remove image preview
     function removeImagePreview() {
       els.imagePreview.style.display = 'none';
@@ -280,10 +183,10 @@
       els.removeImage.style.display = 'none';
       selectedImage = null;
     }
-
-    // Handle user input in the location field
-    function handleLocationInput() {
-      const query = els.location.value.trim();
+    
+    // Handle location input (auto-completion)
+    els.location.addEventListener('input', function () {
+      const query = this.value.trim();
       clearTimeout(debounceTimer);
       if (query.length < 3) {
         els.searchResults.classList.remove('active');
@@ -291,56 +194,116 @@
       }
       els.loadingSpinner.style.display = 'inline-block';
       debounceTimer = setTimeout(() => searchAddress(query), 500);
-    }
-
-    // Hide suggestions when clicking outside
-    function handleDocumentClick(e) {
-      if (!e.target.closest('#location') && !e.target.closest('#search-results')) {
+    });
+    
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#location') && !e.target.closest('#search-results'))
         els.searchResults.classList.remove('active');
-      }
-    }
-
-    // Show image preview
-    function handleImageChange() {
+    });
+    
+    // Image input change: show preview
+    els.foodImage.addEventListener('change', function () {
       if (this.files && this.files[0]) {
         selectedImage = this.files[0];
         let reader = new FileReader();
-        reader.onload = e => {
-          els.imagePreview.src = e.target.result;
-          els.imagePreview.style.display = 'block';
-          els.removeImage.style.display = 'block';
+        reader.onload = e => { 
+          els.imagePreview.src = e.target.result; 
+          els.imagePreview.style.display = 'block'; 
+          els.removeImage.style.display = 'block'; 
         };
         reader.readAsDataURL(selectedImage);
       }
-    }
-
-    // Build short address from Nominatim
-    function getShortAddress(result) {
-      if (!result.address) {
-        return result.display_name || '';
+    });
+    
+    els.removeImage.addEventListener('click', removeImagePreview);
+    els.submitBtn.addEventListener('click', addNewFoodEntry);
+    els.cancelBtn.addEventListener('click', () => {
+      clearTemporaryMarkers();
+      selectedCoordinates = null;
+      els.location.value = '';
+      els.cancelBtn.style.display = 'none';
+    });
+    
+    // Initialize map
+    window.onload = async () => {
+      // If user is logged in, update currentUserId
+      const { data: { session } } = await sb.auth.getSession();
+      if (session && session.user) {
+        currentUserId = session.user.id;
       }
+      
+      map = L.map('map', { center: [31.7683, 35.2137], zoom: 8, minZoom: 7, maxZoom: 18 });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      
+      map.on('click', e => {
+        const { lat, lng } = e.latlng;
+        selectedCoordinates = [lat, lng];
+        reverseGeocode(lat, lng);
+        clearTemporaryMarkers();
+        const popupEl = document.createElement('div');
+        popupEl.className = 'popup-content';
+        popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>מיקום נבחר</h4></div>
+          <div class="popup-body"><p>${lat.toFixed(5)}, ${lng.toFixed(5)}</p></div>`;
+        const marker = L.marker([lat, lng], { icon: createMarkerIcon(true) }).addTo(map);
+        marker.isTemporary = true; markers.temp = marker;
+        marker.bindPopup(popupEl).openPopup();
+        popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
+        els.cancelBtn.style.display = 'block';
+      });
+      
+      setTimeout(() => map.invalidateSize(), 100);
+      await fetchFoodLocations();
+      
+      // Subscribe to real-time updates
+      sb.channel('public:food_locations')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'food_locations' }, payload => {
+          let newEntry = payload.new;
+          if (!foodLocations.find(loc => loc.id === newEntry.id)) {
+            foodLocations.push(newEntry);
+            addMarkerForLocation(newEntry);
+            updateFoodList();
+          }
+        })
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'food_locations' }, payload => {
+          let deleted = payload.old;
+          foodLocations = foodLocations.filter(loc => loc.id !== deleted.id);
+          if (markers[deleted.id]) {
+            map.removeLayer(markers[deleted.id]);
+            delete markers[deleted.id];
+          }
+          updateFoodList();
+        })
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'food_locations' }, payload => {
+          let updated = payload.new;
+          foodLocations = foodLocations.map(loc => loc.id === updated.id ? updated : loc);
+          if (markers[updated.id]) {
+            map.removeLayer(markers[updated.id]);
+            delete markers[updated.id];
+          }
+          addMarkerForLocation(updated);
+          updateFoodList();
+        })
+        .subscribe();
+      
+      setInterval(() => {
+        const now = Date.now();
+        foodLocations.filter(entry => entry.expiresAt < now).forEach(entry => deleteFoodLocation(entry.id));
+      }, 60000);
+    };
+    
+    // Auto-completion: short address (only street and city)
+    function getShortAddress(result) {
+      if (!result.address) return result.display_name || '';
       const addr = result.address;
       const road = addr.road || '';
       const houseNumber = addr.house_number || '';
       let city = addr.city || addr.town || addr.village || '';
-      city = city.replace(/\d+/g, '').trim();  // remove digits
-
+      city = city.replace(/\d+/g, '').trim();
       let streetPart = road;
-      if (houseNumber) {
-        if (streetPart) {
-          streetPart += ' ' + houseNumber;
-        } else {
-          streetPart = houseNumber;
-        }
-      }
-      if (streetPart && city) {
-        return streetPart + ', ' + city;
-      } else {
-        return (streetPart || city).trim();
-      }
+      if (houseNumber) { streetPart += streetPart ? ' ' + houseNumber : houseNumber; }
+      return (streetPart && city) ? streetPart + ', ' + city : (streetPart || city).trim();
     }
-
-    // =============== Search & Reverse Geocoding ===============
+    
     async function searchAddress(query) {
       if (!query.toLowerCase().includes('israel')) query += ' Israel';
       try {
@@ -353,7 +316,7 @@
           els.searchResults.innerHTML = '<div class="search-item">לא נמצאו תוצאות</div>';
         } else {
           data.forEach((result, i) => {
-            let item = document.createElement('div');
+            const item = document.createElement('div');
             item.className = 'search-item';
             item.textContent = getShortAddress(result);
             item.addEventListener('click', () => selectSearchResult(i));
@@ -367,37 +330,28 @@
         els.searchResults.classList.add('active');
       }
     }
-
+    
     function selectSearchResult(i) {
-      let result = searchResults[i];
-      let shortAddr = getShortAddress(result);
+      const result = searchResults[i];
+      const shortAddr = getShortAddress(result);
       els.location.value = shortAddr;
       els.searchResults.innerHTML = '';
       els.searchResults.classList.remove('active');
       const lat = parseFloat(result.lat), lng = parseFloat(result.lon);
       selectedCoordinates = [lat, lng];
       clearTemporaryMarkers();
-
       const popupEl = document.createElement('div');
       popupEl.className = 'popup-content';
-      popupEl.innerHTML = `
-        <div class="popup-header">
-          <span class="close-popup">&times;</span>
-          <h4>מיקום נבחר</h4>
-        </div>
-        <div class="popup-body">
-          <p>${shortAddr}</p>
-        </div>
-      `;
+      popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>מיקום נבחר</h4></div>
+        <div class="popup-body"><p>${shortAddr}</p></div>`;
       const marker = L.marker([lat, lng], { icon: createMarkerIcon(true) }).addTo(map);
-      marker.isTemporary = true;
-      markers.temp = marker;
+      marker.isTemporary = true; markers.temp = marker;
       marker.bindPopup(popupEl).openPopup();
       popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
       map.setView([lat, lng], 15);
       els.cancelBtn.style.display = 'block';
     }
-
+    
     async function reverseGeocode(lat, lng) {
       els.loadingSpinner.style.display = 'inline-block';
       try {
@@ -410,8 +364,7 @@
         els.loadingSpinner.style.display = 'none';
       }
     }
-
-    // =============== Image Upload ===============
+    
     async function uploadImage(file, id) {
       if (!file) return null;
       if (!file.type.startsWith("image/")) {
@@ -420,11 +373,8 @@
       }
       try {
         const fileExtension = file.name.split('.').pop();
-        const uniqueFileName = `${id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${fileExtension}`;
-        const { data, error } = await sb.storage.from('food_images').upload(uniqueFileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+        const uniqueFileName = `${id}_${Date.now()}_${Math.random().toString(36).substr(2,5)}.${fileExtension}`;
+        const { data, error } = await sb.storage.from('food_images').upload(uniqueFileName, file, { cacheControl: '3600', upsert: false });
         if (error) {
           console.error("שגיאה בהעלאת התמונה:", error);
           alert("שגיאה בהעלאת התמונה.");
@@ -443,8 +393,7 @@
         return null;
       }
     }
-
-    // =============== Database Operations ===============
+    
     async function addNewFoodEntry() {
       const loc = els.location.value.trim();
       const food = els.food.value.trim();
@@ -460,9 +409,7 @@
       const now = Date.now();
       try {
         let imageUrl = null;
-        if (selectedImage) {
-          imageUrl = await uploadImage(selectedImage, now.toString());
-        }
+        if (selectedImage) imageUrl = await uploadImage(selectedImage, now.toString());
         const entry = {
           location: loc,
           food,
@@ -471,15 +418,11 @@
           timestamp: now,
           expiresAt: now + (24 * 60 * 60 * 1000),
           imageUrl,
-          createdBy: currentUserId // Either user ID or "אנונימי"
+          createdBy: currentUserId
         };
         console.log("Inserting entry:", entry);
         const { error } = await sb.from('food_locations').insert([entry]);
-        if (error) {
-          console.error("Insert error details:", error);
-          throw error;
-        }
-        // Reset
+        if (error) { console.error("Insert error details:", error); throw error; }
         els.location.value = '';
         els.food.value = '';
         els.amount.value = '1';
@@ -492,7 +435,7 @@
         alert("שגיאה בהוספת מיקום המזון. אנא נסה שוב.");
       }
     }
-
+    
     async function deleteFoodLocation(id) {
       try {
         const { error } = await sb.from('food_locations').delete().eq('id', id);
@@ -502,7 +445,7 @@
         alert("שגיאה במחיקת מיקום המזון. אנא נסה שוב.");
       }
     }
-
+    
     async function fetchFoodLocations() {
       try {
         const now = Date.now();
@@ -515,18 +458,13 @@
         console.error("שגיאה בטעינת מיקומי המזון:", e);
       }
     }
-
-    // =============== Markers & List ===============
+    
     function updateMapMarkers() {
-      Object.values(markers).forEach(marker => {
-        if (!marker.isTemporary) {
-          map.removeLayer(marker);
-        }
-      });
+      Object.values(markers).forEach(marker => { if (!marker.isTemporary) map.removeLayer(marker); });
       markers = markers.temp ? { temp: markers.temp } : {};
       foodLocations.forEach(addMarkerForLocation);
     }
-
+    
     function addMarkerForLocation(entry) {
       const marker = L.marker([entry.coordinates.lat, entry.coordinates.lng], { icon: createMarkerIcon() }).addTo(map);
       markers[entry.id] = marker;
@@ -534,27 +472,13 @@
       const deleteButtonHtml = (entry.createdBy === currentUserId)
         ? `<button class="delete-btn"><i class="fas fa-trash"></i> מחק</button>`
         : '';
-      const imageHtml = entry.imageUrl
-        ? `<img src="${entry.imageUrl}" class="popup-image" alt="תמונת מזון">`
-        : '';
-
+      const imageHtml = entry.imageUrl ? `<img src="${entry.imageUrl}" class="popup-image" alt="תמונת מזון">` : '';
       const popupEl = document.createElement('div');
       popupEl.className = 'popup-content';
-      popupEl.innerHTML = `
-        <div class="popup-header">
-          <span class="close-popup">&times;</span>
-          <h4>${entry.food}</h4>
-        </div>
-        <div class="popup-body">
-          <p>${entry.location}</p>
-          <p>כמות: ${entry.amount}</p>
-          <p style="font-size:0.8rem;color:#6c757d;">פג תוקף בעוד: ${timeRemaining}</p>
-          ${imageHtml}
-        </div>
-        <div class="popup-footer">
-          ${deleteButtonHtml}
-        </div>
-      `;
+      popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>${entry.food}</h4></div>
+        <div class="popup-body"><p>${entry.location}</p><p>כמות: ${entry.amount}</p>
+        <p style="font-size:0.8rem;color:#6c757d;">פג תוקף בעוד: ${timeRemaining}</p>${imageHtml}</div>
+        <div class="popup-footer">${deleteButtonHtml}</div>`;
       marker.bindPopup(popupEl);
       popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
       if (deleteButtonHtml) {
@@ -566,22 +490,18 @@
         });
       }
     }
-
+    
     function updateFoodList() {
       els.foodList.innerHTML = '';
       els.entriesCount.textContent = foodLocations.length;
       els.emptyState.style.display = foodLocations.length === 0 ? 'block' : 'none';
-      // Sort newest first
       foodLocations.sort((a, b) => b.timestamp - a.timestamp).forEach(entry => {
         const timeRemaining = formatTime(entry.expiresAt - Date.now());
-        const imageElement = entry.imageUrl
-          ? `<img src="${entry.imageUrl}" class="food-image-thumbnail" alt="תמונה ממוזון">`
-          : '';
+        const imageElement = entry.imageUrl ? `<img src="${entry.imageUrl}" class="food-image-thumbnail" alt="תמונה ממוזון">` : '';
         const listItem = document.createElement('li');
         listItem.className = 'food-item';
         listItem.dataset.id = entry.id;
-        listItem.innerHTML = `
-          <div>
+        listItem.innerHTML = `<div>
             <div class="food-name">${entry.food}</div>
             <div class="food-location">${entry.location}</div>
             <div class="expiry-info">פג תוקף בעוד: ${timeRemaining}</div>
@@ -589,10 +509,9 @@
           <div style="display:flex;align-items:center;">
             <span class="food-amount">${entry.amount}</span>
             ${imageElement}
-          </div>
-        `;
+          </div>`;
         listItem.addEventListener('click', () => {
-          let marker = markers[entry.id];
+          const marker = markers[entry.id];
           if (marker) {
             map.setView([entry.coordinates.lat, entry.coordinates.lng], 15);
             marker.openPopup();
