@@ -2,27 +2,33 @@
 <html lang="he">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MealsForAll - הרשמה</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      margin: 0; 
-      padding: 0;
       background: #f8f9fa;
+      margin: 0;
+      padding: 0;
       direction: rtl;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
     }
     .container {
-      max-width: 400px;
-      margin: 2rem auto;
       background: #fff;
       padding: 1rem;
       border-radius: 8px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      width: 90%;
+      max-width: 400px;
     }
-    h1 {
+    h1, h2 {
       text-align: center;
       color: #4361ee;
+      margin-bottom: 1rem;
     }
     .form-group {
       margin-bottom: 1rem;
@@ -32,7 +38,8 @@
       margin-bottom: 0.3rem;
       font-weight: 500;
     }
-    input[type="email"], input[type="password"] {
+    input[type="email"],
+    input[type="password"] {
       width: 100%;
       padding: 0.7rem;
       border: 1px solid #dee2e6;
@@ -50,6 +57,7 @@
       font-size: 1rem;
       cursor: pointer;
       font-weight: 500;
+      margin-top: 1rem;
     }
     .link {
       text-align: center;
@@ -71,7 +79,7 @@
 <body>
   <div class="container">
     <h1>MealsForAll</h1>
-    <h2 style="text-align:center;">הרשמה</h2>
+    <h2>הרשמה</h2>
     <div id="error-message" class="error"></div>
     <div class="form-group">
       <label for="email">אימייל</label>
@@ -87,15 +95,14 @@
       <a href="index.html">חזרה לעמוד הראשי</a>
     </div>
   </div>
-
   <script>
     const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
+    const supabaseKey = 'YOUR_SUPABASE_KEY_HERE';
     const sb = supabase.createClient(supabaseUrl, supabaseKey);
-
+    
     const registerBtn = document.getElementById('register-btn');
     const errorMsg = document.getElementById('error-message');
-
+    
     registerBtn.addEventListener('click', async () => {
       errorMsg.textContent = '';
       const email = document.getElementById('email').value.trim();
@@ -104,12 +111,10 @@
         errorMsg.textContent = 'אנא מלא אימייל וסיסמה.';
         return;
       }
-      // Try signing up with Supabase
       const { data, error } = await sb.auth.signUp({ email, password });
       if (error) {
         errorMsg.textContent = 'שגיאה בהרשמה: ' + error.message;
       } else {
-        // On success, redirect to index.html
         window.location.href = 'index.html';
       }
     });
