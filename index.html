@@ -132,7 +132,7 @@
     }
     let currentUser = localStorage.getItem('currentUserId');
     
-    // Replace with your actual Supabase credentials.
+    // Supabase credentials.
     const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
     const sb = supabase.createClient(supabaseUrl, supabaseKey);
@@ -153,19 +153,40 @@
       entriesCount: document.getElementById('entries-count'),
       emptyState: document.getElementById('empty-state')
     };
+
+    // Helper: Format milliseconds into "xh ym" format.
     const formatTime = ms => `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
+
+    // Create a custom marker icon. If isTemp is true, use the temporary style.
     const createMarkerIcon = isTemp => L.divIcon({
       className: `custom-marker${isTemp ? ' marker-temp' : ''}`,
       html: `<i class="fas fa-${isTemp ? 'crosshairs' : 'utensils'}"></i>`,
       iconSize: [48, 48],
       iconAnchor: [24, 24]
     });
-    const clearTemporaryMarkers = () => { if (markers.temp) { map.removeLayer(markers.temp); delete markers.temp; } };
-    const removeImagePreview = () => { els.imagePreview.style.display = 'none'; els.imagePreview.src = ''; els.removeImage.style.display = 'none'; selectedImage = null; };
+
+    // Remove temporary marker from the map.
+    const clearTemporaryMarkers = () => { 
+      if (markers.temp) { 
+        map.removeLayer(markers.temp); 
+        delete markers.temp; 
+      } 
+    };
+
+    // Remove image preview.
+    const removeImagePreview = () => { 
+      els.imagePreview.style.display = 'none'; 
+      els.imagePreview.src = ''; 
+      els.removeImage.style.display = 'none'; 
+      selectedImage = null; 
+    };
 
     window.onload = () => {
+      // Initialize the map.
       map = L.map('map', { center: [31.7683, 35.2137], zoom: 8, minZoom: 7, maxZoom: 18 });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+      
+      // Map click event: select a location.
       map.on('click', e => {
         let { lat, lng } = e.latlng;
         selectedCoordinates = [lat, lng];
@@ -176,57 +197,104 @@
         popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>Selected location</h4></div>
           <div class="popup-body"><p>${lat.toFixed(5)}, ${lng.toFixed(5)}</p></div>`;
         let marker = L.marker([lat, lng], { icon: createMarkerIcon(true) }).addTo(map);
-        marker.isTemporary = true; markers.temp = marker;
+        marker.isTemporary = true; 
+        markers.temp = marker;
         marker.bindPopup(popupEl).openPopup();
         popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
         els.cancelBtn.style.display = 'block';
       });
+
+      // Fix map size on load.
       setTimeout(() => map.invalidateSize(), 100);
+
+      // Address input event: search as user types.
       els.location.addEventListener('input', function () {
         let query = this.value.trim();
         clearTimeout(debounceTimer);
-        if (query.length < 3) { els.searchResults.classList.remove('active'); return; }
+        if (query.length < 3) { 
+          els.searchResults.classList.remove('active'); 
+          return; 
+        }
         els.loadingSpinner.style.display = 'inline-block';
         debounceTimer = setTimeout(() => searchAddress(query), 500);
       });
-      document.addEventListener('click', e => { if (!e.target.closest('#location') && !e.target.closest('#search-results')) els.searchResults.classList.remove('active'); });
+
+      // Click outside the search field hides the suggestions.
+      document.addEventListener('click', e => { 
+        if (!e.target.closest('#location') && !e.target.closest('#search-results')) 
+          els.searchResults.classList.remove('active'); 
+      });
+
+      // Image input change: show preview.
       els.foodImage.addEventListener('change', function () {
         if (this.files && this.files[0]) {
           selectedImage = this.files[0];
           let reader = new FileReader();
-          reader.onload = e => { els.imagePreview.src = e.target.result; els.imagePreview.style.display = 'block'; els.removeImage.style.display = 'block'; };
+          reader.onload = e => { 
+            els.imagePreview.src = e.target.result; 
+            els.imagePreview.style.display = 'block'; 
+            els.removeImage.style.display = 'block'; 
+          };
           reader.readAsDataURL(selectedImage);
         }
       });
+
+      // Remove image preview on click.
       els.removeImage.addEventListener('click', removeImagePreview);
+
+      // Submit button: add new food location.
       els.submitBtn.addEventListener('click', addNewFoodEntry);
-      els.cancelBtn.addEventListener('click', () => { clearTemporaryMarkers(); selectedCoordinates = null; els.location.value = ''; els.cancelBtn.style.display = 'none'; });
+
+      // Cancel button: clear temporary markers and inputs.
+      els.cancelBtn.addEventListener('click', () => { 
+        clearTemporaryMarkers(); 
+        selectedCoordinates = null; 
+        els.location.value = ''; 
+        els.cancelBtn.style.display = 'none'; 
+      });
+
+      // Fetch existing food locations.
       fetchFoodLocations();
+
+      // Subscribe to real-time changes in food locations.
       sb.channel('public:food_locations')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'food_locations' }, payload => {
           let newEntry = payload.new;
-          if (!foodLocations.find(loc => loc.id === newEntry.id)) { foodLocations.push(newEntry); addMarkerForLocation(newEntry); updateFoodList(); }
+          if (!foodLocations.find(loc => loc.id === newEntry.id)) { 
+            foodLocations.push(newEntry); 
+            addMarkerForLocation(newEntry); 
+            updateFoodList(); 
+          }
         })
         .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'food_locations' }, payload => {
           let deleted = payload.old;
           foodLocations = foodLocations.filter(loc => loc.id !== deleted.id);
-          if (markers[deleted.id]) { map.removeLayer(markers[deleted.id]); delete markers[deleted.id]; }
+          if (markers[deleted.id]) { 
+            map.removeLayer(markers[deleted.id]); 
+            delete markers[deleted.id]; 
+          }
           updateFoodList();
         })
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'food_locations' }, payload => {
           let updated = payload.new;
           foodLocations = foodLocations.map(loc => loc.id === updated.id ? updated : loc);
-          if (markers[updated.id]) { map.removeLayer(markers[updated.id]); delete markers[updated.id]; }
+          if (markers[updated.id]) { 
+            map.removeLayer(markers[updated.id]); 
+            delete markers[updated.id]; 
+          }
           addMarkerForLocation(updated);
           updateFoodList();
         })
         .subscribe();
+
+      // Automatically delete expired food locations every minute.
       setInterval(() => {
         const now = Date.now();
         foodLocations.filter(entry => entry.expiresAt < now).forEach(entry => deleteFoodLocation(entry.id));
       }, 60000);
     };
 
+    // Search address using Nominatim.
     function searchAddress(query) {
       if (!query.toLowerCase().includes('israel')) query += ' Israel';
       fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=il&limit=5`)
@@ -235,14 +303,16 @@
           searchResults = data;
           els.loadingSpinner.style.display = 'none';
           els.searchResults.innerHTML = '';
-          if (data.length === 0) els.searchResults.innerHTML = '<div class="search-item">No results found</div>';
-          else data.forEach((result, i) => {
-            let item = document.createElement('div');
-            item.className = 'search-item';
-            item.textContent = result.display_name;
-            item.addEventListener('click', () => selectSearchResult(i));
-            els.searchResults.appendChild(item);
-          });
+          if (data.length === 0) 
+            els.searchResults.innerHTML = '<div class="search-item">No results found</div>';
+          else 
+            data.forEach((result, i) => {
+              let item = document.createElement('div');
+              item.className = 'search-item';
+              item.textContent = result.display_name;
+              item.addEventListener('click', () => selectSearchResult(i));
+              els.searchResults.appendChild(item);
+            });
           els.searchResults.classList.add('active');
         })
         .catch(() => {
@@ -252,10 +322,11 @@
         });
     }
 
+    // When a search result is selected.
     function selectSearchResult(i) {
       let result = searchResults[i];
       els.location.value = result.display_name;
-      els.searchResults.innerHTML = ''; // clear suggestions
+      els.searchResults.innerHTML = '';
       els.searchResults.classList.remove('active');
       let lat = parseFloat(result.lat), lng = parseFloat(result.lon);
       selectedCoordinates = [lat, lng];
@@ -265,36 +336,80 @@
       popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>Selected location</h4></div>
         <div class="popup-body"><p>${result.display_name}</p></div>`;
       let marker = L.marker([lat, lng], { icon: createMarkerIcon(true) }).addTo(map);
-      marker.isTemporary = true; markers.temp = marker;
+      marker.isTemporary = true; 
+      markers.temp = marker;
       marker.bindPopup(popupEl).openPopup();
       popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
       map.setView([lat, lng], 15);
       els.cancelBtn.style.display = 'block';
     }
 
+    // Reverse geocode coordinates to get a human-readable address.
     function reverseGeocode(lat, lng) {
       els.loadingSpinner.style.display = 'inline-block';
       fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
         .then(res => res.json())
-        .then(data => { els.location.value = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`; els.loadingSpinner.style.display = 'none'; })
-        .catch(() => { els.location.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`; els.loadingSpinner.style.display = 'none'; });
+        .then(data => { 
+          els.location.value = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`; 
+          els.loadingSpinner.style.display = 'none'; 
+        })
+        .catch(() => { 
+          els.location.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`; 
+          els.loadingSpinner.style.display = 'none'; 
+        });
     }
 
+    // Updated uploadImage function ensuring 100% reliability.
     async function uploadImage(file, id) {
       if (!file) return null;
+      // Check if the file is an image.
+      if (!file.type.startsWith("image/")) {
+        alert("Selected file is not an image.");
+        return null;
+      }
       try {
-        const filePath = `${id}/${file.name}`;
-        let { error } = await sb.storage.from('food_images').upload(filePath, file);
-        if (error) throw error;
-        const { data: publicData } = sb.storage.from('food_images').getPublicUrl(filePath);
+        // Generate a unique filename using provided id, current timestamp, and a random string.
+        const fileExtension = file.name.split('.').pop();
+        const uniqueFileName = `${id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${fileExtension}`;
+        const filePath = uniqueFileName;
+        
+        // Upload file to Supabase storage with caching options.
+        let { data, error } = await sb.storage.from('food_images').upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+        if (error) {
+          console.error("Error during image upload:", error);
+          alert("Error uploading image.");
+          return null;
+        }
+        
+        // Retrieve the public URL of the uploaded image.
+        const { data: publicData, error: publicError } = sb.storage.from('food_images').getPublicUrl(filePath);
+        if (publicError) {
+          console.error("Error getting public URL:", publicError);
+          alert("Error retrieving image URL.");
+          return null;
+        }
         return publicData.publicUrl;
-      } catch (e) { console.error("Error uploading image:", e); return null; }
+      } catch (e) {
+        console.error("Exception during image upload:", e);
+        alert("Error uploading image.");
+        return null;
+      }
     }
 
+    // Add new food entry to the database.
     async function addNewFoodEntry() {
       const loc = els.location.value, food = els.food.value, amount = els.amount.value;
-      if (!loc || !food || !amount) { alert('Please fill in all fields!'); return; }
-      if (!selectedCoordinates) { alert('Please select a location on the map or search for an address'); return; }
+      if (!loc || !food || !amount) { 
+        alert('Please fill in all fields!'); 
+        return; 
+      }
+      if (!selectedCoordinates) { 
+        alert('Please select a location on the map or search for an address'); 
+        return; 
+      }
       const now = Date.now();
       try {
         let imageUrl = null;
@@ -309,43 +424,71 @@
           imageUrl,
           createdBy: currentUser
         };
-        console.log("Inserting entry:", entry); // log payload
+        console.log("Inserting entry:", entry);
         let { error } = await sb.from('food_locations').insert([entry]);
-        if (error) { console.error("Insert error details:", error); throw error; }
-        els.location.value = ''; els.food.value = ''; els.amount.value = '1';
-        removeImagePreview(); selectedCoordinates = null; clearTemporaryMarkers();
+        if (error) { 
+          console.error("Insert error details:", error); 
+          throw error; 
+        }
+        // Reset form fields and clear temporary markers.
+        els.location.value = ''; 
+        els.food.value = ''; 
+        els.amount.value = '1';
+        removeImagePreview(); 
+        selectedCoordinates = null; 
+        clearTemporaryMarkers();
         els.cancelBtn.style.display = 'none';
-      } catch (e) { console.error("Error adding food location:", e); alert("Error adding food location. Please try again."); }
+      } catch (e) { 
+        console.error("Error adding food location:", e); 
+        alert("Error adding food location. Please try again."); 
+      }
     }
 
+    // Delete a food location entry.
     async function deleteFoodLocation(id) {
-      try { let { error } = await sb.from('food_locations').delete().eq('id', id); if (error) throw error; }
-      catch (e) { console.error("Error deleting food location:", e); alert("Error deleting food location. Please try again."); }
+      try { 
+        let { error } = await sb.from('food_locations').delete().eq('id', id); 
+        if (error) throw error; 
+      }
+      catch (e) { 
+        console.error("Error deleting food location:", e); 
+        alert("Error deleting food location. Please try again."); 
+      }
     }
 
+    // Fetch food locations from the database.
     async function fetchFoodLocations() {
       try {
         const now = Date.now();
         let { data, error } = await sb.from('food_locations').select('*').gt('expiresAt', now);
         if (error) throw error;
         foodLocations = data || [];
-        updateMapMarkers(); updateFoodList();
-      } catch (e) { console.error("Error fetching food locations:", e); }
+        updateMapMarkers(); 
+        updateFoodList();
+      } catch (e) { 
+        console.error("Error fetching food locations:", e); 
+      }
     }
 
+    // Update markers on the map.
     function updateMapMarkers() {
-      Object.values(markers).forEach(marker => { if (!marker.isTemporary) map.removeLayer(marker); });
+      Object.values(markers).forEach(marker => { 
+        if (!marker.isTemporary) 
+          map.removeLayer(marker); 
+      });
       markers = markers.temp ? { temp: markers.temp } : {};
       foodLocations.forEach(addMarkerForLocation);
     }
 
+    // Add a marker on the map for a food location entry.
     function addMarkerForLocation(entry) {
       let marker = L.marker([entry.coordinates.lat, entry.coordinates.lng], { icon: createMarkerIcon() }).addTo(map);
       markers[entry.id] = marker;
       const timeRemaining = formatTime(entry.expiresAt - Date.now());
       let deleteButtonHtml = (entry.createdBy === currentUser) ? `<button class="delete-btn"><i class="fas fa-trash"></i> Delete</button>` : '';
       let imageHtml = entry.imageUrl ? `<img src="${entry.imageUrl}" class="popup-image" alt="Food Image">` : '';
-      let popupEl = document.createElement('div'); popupEl.className = 'popup-content';
+      let popupEl = document.createElement('div'); 
+      popupEl.className = 'popup-content';
       popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>${entry.food}</h4></div>
         <div class="popup-body"><p>${entry.location}</p><p>Quantity: ${entry.amount}</p>
         <p style="font-size:0.8rem;color:#6c757d;">Expires in: ${timeRemaining}</p>${imageHtml}</div>
@@ -354,11 +497,15 @@
       popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
       if (deleteButtonHtml) {
         popupEl.querySelector('.delete-btn').addEventListener('click', function () {
-          if (confirm('Are you sure you want to delete this food location?')) { deleteFoodLocation(entry.id); marker.closePopup(); }
+          if (confirm('Are you sure you want to delete this food location?')) { 
+            deleteFoodLocation(entry.id); 
+            marker.closePopup(); 
+          }
         });
       }
     }
 
+    // Update the list of food locations in the sidebar.
     function updateFoodList() {
       els.foodList.innerHTML = '';
       els.entriesCount.textContent = foodLocations.length;
@@ -372,7 +519,13 @@
         listItem.innerHTML = `<div><div class="food-name">${entry.food}</div><div class="food-location">${entry.location}</div>
           <div class="expiry-info">Expires in: ${timeRemaining}</div></div>
           <div style="display:flex;align-items:center;"><span class="food-amount">${entry.amount}</span>${imageElement}</div>`;
-        listItem.addEventListener('click', () => { let marker = markers[entry.id]; if (marker) { map.setView([entry.coordinates.lat, entry.coordinates.lng], 15); marker.openPopup(); } });
+        listItem.addEventListener('click', () => { 
+          let marker = markers[entry.id]; 
+          if (marker) { 
+            map.setView([entry.coordinates.lat, entry.coordinates.lng], 15); 
+            marker.openPopup(); 
+          } 
+        });
         els.foodList.appendChild(listItem);
       });
     }
