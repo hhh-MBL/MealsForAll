@@ -182,20 +182,41 @@
       selectedImage = null; 
     };
 
-    // Helper: Shorten address using key components.
+    /**
+     * Build a short address string with only:
+     * - Street (road + house_number)
+     * - City (city/town/village) 
+     * Strips out any digits from the city name if Nominatim included a ZIP code.
+     */
     function getShortAddress(result) {
-      if (result.address) {
-        let addr = result.address;
-        let parts = [];
-        if(addr.road) parts.push(addr.road);
-        if(addr.house_number) parts.push(addr.house_number);
-        if(addr.city) parts.push(addr.city);
-        else if(addr.town) parts.push(addr.town);
-        else if(addr.village) parts.push(addr.village);
-        if(addr.country) parts.push(addr.country);
-        return parts.join(', ');
+      if (!result.address) {
+        return result.display_name || '';
       }
-      return result.display_name;
+      const addr = result.address;
+      const road = addr.road || '';
+      const houseNumber = addr.house_number || '';
+      // city might come in as 'Nes Tziona 762603' so let's remove digits:
+      let city = addr.city || addr.town || addr.village || '';
+      city = city.replace(/\d+/g, '').trim();  // remove numbers (like ZIP codes)
+
+      // Combine road and house number:
+      let streetPart = road;
+      if (houseNumber) {
+        if (streetPart) {
+          streetPart += ' ' + houseNumber;
+        } else {
+          streetPart = houseNumber;
+        }
+      }
+
+      // Build final short address: "street, city"
+      // If one is missing, it won't add the comma.
+      if (streetPart && city) {
+        return streetPart + ', ' + city;
+      } else {
+        // Either streetPart or city is empty. Combine them as best we can.
+        return (streetPart || city).trim();
+      }
     }
 
     window.onload = () => {
@@ -313,6 +334,7 @@
 
     // Search address using Nominatim.
     function searchAddress(query) {
+      // Force 'Israel' to get results in Israel, but user may want partial addresses.
       if (!query.toLowerCase().includes('israel')) query += ' Israel';
       fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=il&limit=5`)
         .then(res => res.json())
@@ -320,9 +342,9 @@
           searchResults = data;
           els.loadingSpinner.style.display = 'none';
           els.searchResults.innerHTML = '';
-          if (data.length === 0) 
+          if (data.length === 0) {
             els.searchResults.innerHTML = '<div class="search-item">לא נמצאו תוצאות</div>';
-          else 
+          } else {
             data.forEach((result, i) => {
               let item = document.createElement('div');
               item.className = 'search-item';
@@ -331,6 +353,7 @@
               item.addEventListener('click', () => selectSearchResult(i));
               els.searchResults.appendChild(item);
             });
+          }
           els.searchResults.classList.add('active');
         })
         .catch(() => {
@@ -363,16 +386,13 @@
       els.cancelBtn.style.display = 'block';
     }
 
-    // Reverse geocode coordinates to get a human-readable address.
+    // Reverse geocode coordinates to get a human-readable address (short version).
     function reverseGeocode(lat, lng) {
       els.loadingSpinner.style.display = 'inline-block';
       fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
         .then(res => res.json())
         .then(data => { 
-          if(data.address)
-            els.location.value = getShortAddress(data);
-          else
-            els.location.value = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+          els.location.value = getShortAddress(data) || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
           els.loadingSpinner.style.display = 'none'; 
         })
         .catch(() => { 
@@ -381,7 +401,7 @@
         });
     }
 
-    // Updated uploadImage function ensuring 100% reliability.
+    // Upload image to Supabase (100% reliability approach).
     async function uploadImage(file, id) {
       if (!file) return null;
       // Check if the file is an image.
@@ -495,8 +515,9 @@
     // Update markers on the map.
     function updateMapMarkers() {
       Object.values(markers).forEach(marker => { 
-        if (!marker.isTemporary) 
+        if (!marker.isTemporary) {
           map.removeLayer(marker); 
+        }
       });
       markers = markers.temp ? { temp: markers.temp } : {};
       foodLocations.forEach(addMarkerForLocation);
@@ -538,9 +559,14 @@
         let listItem = document.createElement('li');
         listItem.className = 'food-item';
         listItem.dataset.id = entry.id;
-        listItem.innerHTML = `<div><div class="food-name">${entry.food}</div><div class="food-location">${entry.location}</div>
-          <div class="expiry-info">פג תוקף בעוד: ${timeRemaining}</div></div>
-          <div style="display:flex;align-items:center;"><span class="food-amount">${entry.amount}</span>${imageElement}</div>`;
+        listItem.innerHTML = `<div>
+            <div class="food-name">${entry.food}</div>
+            <div class="food-location">${entry.location}</div>
+            <div class="expiry-info">פג תוקף בעוד: ${timeRemaining}</div>
+          </div>
+          <div style="display:flex;align-items:center;">
+            <span class="food-amount">${entry.amount}</span>${imageElement}
+          </div>`;
         listItem.addEventListener('click', () => { 
           let marker = markers[entry.id]; 
           if (marker) { 
