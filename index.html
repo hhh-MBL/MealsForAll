@@ -58,11 +58,30 @@
     .upload-btn .fa-camera { font-size:1.5rem; margin-right:0.3rem; }
     .food-image-thumbnail { width:50px; height:50px; border-radius:4px; margin-left:8px; object-fit:cover; }
     .popup-image { width:100%; max-height:150px; object-fit:cover; border-radius:6px; margin-top:8px; }
+    
+    /* שינוי צבע לחיצה של כפתורי התחברות והרשמה (לא סגול) */
+    a:active, a:focus { color: inherit; text-decoration: none; }
+    
+    /* סגנון לדירוג עם כוכבים */
+    .rating {
+      display: flex;
+      justify-content: center;
+      margin-top: 8px;
+    }
+    .rating .star {
+      font-size: 1.5rem;
+      color: #ccc;
+      cursor: pointer;
+      margin: 0 2px;
+    }
+    .rating .star.selected {
+      color: #FFD700;
+    }
   </style>
 </head>
 <body>
   <div class="app-container">
-    <!-- Logo remains in English -->
+    <!-- Logo נשאר באנגלית -->
     <h1 class="app-title">MealsForAll</h1>
     <div style="margin-bottom: 1rem; text-align: center;">
       <a href="login.html">התחברות</a> | <a href="register.html">הרשמה</a>
@@ -73,7 +92,7 @@
           <h2 style="margin-bottom:1rem; font-size:1.2rem;">הוסף מיקום מזון</h2>
           <div class="form-group">
             <label for="location">מיקום</label>
-            <!-- Auto-completion removed; full address is manually entered -->
+            <!-- הזנת כתובת מלאה -->
             <div class="input-with-icon" style="position:relative;">
               <i class="fas fa-map-marker-alt"></i>
               <input type="text" id="location" placeholder="הזן כתובת מלאה" />
@@ -85,6 +104,14 @@
             <div class="input-with-icon">
               <i class="fas fa-utensils"></i>
               <input type="text" id="food" placeholder="איזה מזון זמין כאן?" />
+            </div>
+          </div>
+          <!-- שדה טלפון חדש -->
+          <div class="form-group">
+            <label for="phone">טלפון</label>
+            <div class="input-with-icon">
+              <i class="fas fa-phone"></i>
+              <input type="text" id="phone" placeholder="הזן מספר טלפון" />
             </div>
           </div>
           <div class="form-group">
@@ -133,13 +160,14 @@
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
     const sb = supabase.createClient(supabaseUrl, supabaseKey);
     
-    // Only allow publishing if a user is logged in.
+    // רק מאפשר הוספה אם המשתמש מחובר
     let currentUserId = null;
     
     let map, markers = {}, selectedCoordinates = null, foodLocations = [], selectedImage = null;
     const els = {
       location: document.getElementById('location'),
       food: document.getElementById('food'),
+      phone: document.getElementById('phone'), // שדה הטלפון החדש
       amount: document.getElementById('amount'),
       foodImage: document.getElementById('food-image'),
       imagePreview: document.getElementById('image-preview'),
@@ -198,13 +226,12 @@
     });
     
     window.onload = async () => {
-      // Check authentication session.
+      // בדיקת סשן התחברות
       const { data: { session } } = await sb.auth.getSession();
       if (session && session.user) {
         currentUserId = session.user.id;
         els.submitBtn.disabled = false;
       } else {
-        // Restrict publishing if not logged in.
         currentUserId = null;
         els.submitBtn.disabled = true;
         els.submitBtn.textContent = "Log in to publish";
@@ -220,10 +247,16 @@
         clearTemporaryMarkers();
         const popupEl = document.createElement('div');
         popupEl.className = 'popup-content';
-        popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>Location Selected</h4></div>
-          <div class="popup-body"><p>${lat.toFixed(5)}, ${lng.toFixed(5)}</p></div>`;
+        popupEl.innerHTML = `<div class="popup-header">
+            <span class="close-popup">&times;</span>
+            <h4>Location Selected</h4>
+          </div>
+          <div class="popup-body">
+            <p>${lat.toFixed(5)}, ${lng.toFixed(5)}</p>
+          </div>`;
         const marker = L.marker([lat, lng], { icon: createMarkerIcon(true) }).addTo(map);
-        marker.isTemporary = true; markers.temp = marker;
+        marker.isTemporary = true; 
+        markers.temp = marker;
         marker.bindPopup(popupEl).openPopup();
         popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
         els.cancelBtn.style.display = 'block';
@@ -313,8 +346,9 @@
     async function addNewFoodEntry() {
       const loc = els.location.value.trim();
       const food = els.food.value.trim();
+      const phone = els.phone.value.trim(); // שדה הטלפון
       const amount = els.amount.value.trim();
-      if (!loc || !food || !amount) {
+      if (!loc || !food || !phone || !amount) {
         alert('Please fill in all fields!');
         return;
       }
@@ -333,6 +367,7 @@
         const entry = {
           location: loc,
           food,
+          phone, // שדה הטלפון
           amount: parseInt(amount),
           coordinates: { lat: selectedCoordinates[0], lng: selectedCoordinates[1] },
           timestamp: now,
@@ -345,6 +380,7 @@
         if (error) { console.error("Insert error:", error); throw error; }
         els.location.value = '';
         els.food.value = '';
+        els.phone.value = '';
         els.amount.value = '1';
         removeImagePreview();
         selectedCoordinates = null;
@@ -393,11 +429,26 @@
         ? `<button class="delete-btn"><i class="fas fa-trash"></i> Delete</button>`
         : '';
       const imageHtml = entry.imageUrl ? `<img src="${entry.imageUrl}" class="popup-image" alt="Food Image">` : '';
+      // HTML להודעת הפופ-אפ כולל אזור לדירוג עם כוכבים
       const popupEl = document.createElement('div');
       popupEl.className = 'popup-content';
-      popupEl.innerHTML = `<div class="popup-header"><span class="close-popup">&times;</span><h4>${entry.food}</h4></div>
-        <div class="popup-body"><p>${entry.location}</p><p>Quantity: ${entry.amount}</p>
-        <p style="font-size:0.8rem;color:#6c757d;">Expires in: ${timeRemaining}</p>${imageHtml}</div>
+      popupEl.innerHTML = `<div class="popup-header">
+          <span class="close-popup">&times;</span>
+          <h4>${entry.food}</h4>
+        </div>
+        <div class="popup-body">
+          <p>${entry.location}</p>
+          <p>Quantity: ${entry.amount}</p>
+          <p style="font-size:0.8rem;color:#6c757d;">Expires in: ${timeRemaining}</p>
+          ${imageHtml}
+          <div class="rating">
+            <span class="star" data-value="1">&#9733;</span>
+            <span class="star" data-value="2">&#9733;</span>
+            <span class="star" data-value="3">&#9733;</span>
+            <span class="star" data-value="4">&#9733;</span>
+            <span class="star" data-value="5">&#9733;</span>
+          </div>
+        </div>
         <div class="popup-footer">${deleteButtonHtml}</div>`;
       marker.bindPopup(popupEl);
       popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
@@ -409,6 +460,19 @@
           }
         });
       }
+      
+      // הוספת אירועי קליק לדירוג עם כוכבים
+      const stars = popupEl.querySelectorAll('.star');
+      stars.forEach(star => {
+        star.addEventListener('click', function() {
+          const rating = parseInt(this.getAttribute('data-value'));
+          stars.forEach(s => {
+            s.classList.toggle('selected', parseInt(s.getAttribute('data-value')) <= rating);
+          });
+          // אפשר לשמור את הדירוג או לשלוח אותו לשרת אם רוצים
+          console.log(`Rated ${rating} stars for entry ${entry.id}`);
+        });
+      });
     }
     
     function updateFoodList() {
