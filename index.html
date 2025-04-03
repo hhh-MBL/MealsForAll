@@ -9,29 +9,45 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* Base styles */
+    /* בסיס – עיצובים כלליים */
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
     body { background:#f8f9fa; }
     .app-container { max-width:1200px; margin:auto; padding:1rem; }
     .app-title { font-size:2rem; color:#4361ee; margin-bottom:1rem; text-align: center; }
-    .main-layout { display: grid; grid-template-columns:280px 1fr; gap:1rem; height:calc(100vh - 100px); }
-    @media (max-width:768px){
-      .main-layout { grid-template-columns:1fr; height:auto; }
+    
+    /* תצוגת הלייאאוט הראשי */
+    .main-layout { display: grid; gap:1rem; height:calc(100vh - 100px); }
+    /* ב-PC – סרגל צדדי ומפה */
+    @media (min-width:768px) {
+      .main-layout { grid-template-columns: 280px 1fr; }
+      .main-layout.collapse-sidebar { grid-template-columns: 1fr; }
     }
+    /* במכשירים ניידים – כברירת מחדל מוצג הסרגל בלבד */
+    @media (max-width:767px) {
+      .main-layout { display: block; }
+      .sidebar { display: block; }
+      #map-container { display: none; }
+      .main-layout.map-view #map-container { display: block; }
+      .main-layout.map-view .sidebar { display: none; }
+    }
+    
     .sidebar, #map-container, #map { border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.05); }
     .sidebar { background:#fff; padding:1rem; display:flex; flex-direction:column; }
     #map-container, #map { height:100%; overflow:hidden; }
+    
     .form-group { margin-bottom:1rem; }
     label { display:block; margin-bottom:0.3rem; font-weight:500; }
     .input-with-icon { position:relative; }
     .input-with-icon i { position:absolute; left:0.7rem; top:50%; transform:translateY(-50%); color:#adb5bd; }
     input { width:100%; padding:0.7rem 1rem 0.7rem 2rem; border:1px solid #dee2e6; border-radius:8px; }
     input:focus { outline:none; border-color:#4361ee; }
+    
     .btn { padding:0.7rem; border:none; border-radius:8px; font-weight:500; cursor:pointer; }
     .btn-primary { background:#4361ee; color:#fff; width:100%; }
     .btn-danger { background:#ef233c; color:#fff; }
     .button-group { display:flex; gap:0.5rem; }
     #cancel-btn { display:none; }
+    
     .food-entries { margin-top:auto; max-height:250px; overflow-y:auto; }
     .entries-title { display:flex; justify-content:space-between; margin-bottom:0.5rem; }
     .entries-counter { background:#4361ee; color:#fff; border-radius:10px; font-size:0.75rem; padding:2px 6px; }
@@ -40,10 +56,11 @@
     .food-name { font-weight:600; }
     .food-location { font-size:0.85rem; color:#6c757d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .food-amount { background:#4361ee; color:#fff; border-radius:12px; font-size:0.8rem; padding:2px 6px; margin-left:0.5rem; }
+    
     .loading-spinner { display:none; width:16px; height:16px; border:2px solid rgba(0,0,0,0.1); border-left-color:#4361ee; border-radius:50%; animation:spin 1s linear infinite; margin-left:8px; }
     @keyframes spin { to { transform:rotate(360deg); } }
     
-    /* Marker icon using original icons */
+    /* סמל המיקום – משתמש באייקונים המקוריים */
     .custom-marker {
       display:flex;
       justify-content:center;
@@ -58,7 +75,7 @@
     }
     .marker-temp { background:#ef233c; }
     
-    /* Popup content styled for Hebrew (RTL) */
+    /* חלונית המידע (פופ-אפ) – עיצוב לעברית */
     .popup-content {
       padding:8px;
       position:relative;
@@ -83,10 +100,10 @@
     .food-image-thumbnail { width:50px; height:50px; border-radius:4px; margin-left:8px; object-fit:cover; }
     .popup-image { width:100%; max-height:150px; object-fit:cover; border-radius:6px; margin-top:8px; }
     
-    /* Login/Signup button active state */
+    /* קישורי התחברות והרשמה */
     a:active, a:focus { color: inherit; text-decoration: none; }
     
-    /* Star rating styling */
+    /* דירוג עם כוכבים */
     .rating {
       display: flex;
       justify-content: center;
@@ -102,34 +119,31 @@
       color: #FFD700;
     }
     
-    /* Mobile navigation toggle button */
+    /* כפתור ניווט – תמיד נראה, בגודל מותאם */
     #toggle-map-btn {
       position: fixed;
       right: 10px;
-      bottom: 50%;
+      bottom: 10px;
       background: #4361ee;
       color: #fff;
       border: none;
       border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      display: none;
       z-index: 1000;
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     }
-    
-    /* Mobile specific styles */
-    @media (max-width:480px) {
-      #toggle-map-btn { display: block; }
-      /* In mobile view, display only sidebar by default */
-      .main-layout { display: block; }
-      #map-container { display: none; }
+    /* במכשירים ניידים */
+    @media (max-width:767px) {
+      #toggle-map-btn { width: 50px; height: 50px; }
+    }
+    /* במכשירי שולחן עבודה – קצת קטן יותר */
+    @media (min-width:768px) {
+      #toggle-map-btn { width: 40px; height: 40px; }
     }
   </style>
 </head>
 <body>
   <div class="app-container">
-    <!-- Logo remains in English -->
+    <!-- הלוגו נשאר באנגלית -->
     <h1 class="app-title">MealsForAll</h1>
     <div style="margin-bottom: 1rem; text-align: center;">
       <a href="login.html">התחברות</a> | <a href="register.html">הרשמה</a>
@@ -140,7 +154,7 @@
           <h2 style="margin-bottom:1rem; font-size:1.2rem;">הוסף מיקום מזון</h2>
           <div class="form-group">
             <label for="location">מיקום</label>
-            <!-- Enter full address -->
+            <!-- הזן כתובת מלאה -->
             <div class="input-with-icon" style="position:relative;">
               <i class="fas fa-map-marker-alt"></i>
               <input type="text" id="location" placeholder="הזן כתובת מלאה" />
@@ -154,7 +168,7 @@
               <input type="text" id="food" placeholder="איזה מזון זמין כאן?" />
             </div>
           </div>
-          <!-- New phone field -->
+          <!-- שדה טלפון -->
           <div class="form-group">
             <label for="phone">טלפון</label>
             <div class="input-with-icon">
@@ -206,16 +220,17 @@
       <div id="map-container"><div id="map"></div></div>
     </div>
   </div>
-  <!-- Mobile toggle button -->
+  
+  <!-- כפתור ניווט (חץ) – תמיד נראה -->
   <button id="toggle-map-btn"><i class="fas fa-arrow-right"></i></button>
   
   <script>
-    // Supabase Setup
+    // הגדרת Supabase
     const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
     const sb = supabase.createClient(supabaseUrl, supabaseKey);
     
-    // Variables and element references
+    // משתנים והפניות לאלמנטים
     let currentUserId = null;
     let map, markers = {}, selectedCoordinates = null, foodLocations = [], selectedImage = null;
     const els = {
@@ -237,7 +252,7 @@
     
     const formatTime = ms => `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
     
-    // Use original marker icons
+    // שימוש באייקונים המקוריים
     const createMarkerIcon = isTemp => L.divIcon({
       className: `custom-marker${isTemp ? ' marker-temp' : ''}`,
       html: `<i class="fas fa-${isTemp ? 'crosshairs' : 'utensils'}"></i>`,
@@ -259,7 +274,7 @@
       selectedImage = null;
     }
     
-    // Image upload handling
+    // טיפול בהעלאת תמונה
     els.foodImage.addEventListener('change', function () {
       if (this.files && this.files[0]) {
         selectedImage = this.files[0];
@@ -275,7 +290,7 @@
     
     els.removeImage.addEventListener('click', removeImagePreview);
     
-    // On submit, if not logged in, redirect to login page
+    // לחיצה על כפתור הפרסום – במידה והמשתמש לא מחובר, מועבר לעמוד ההתחברות
     els.submitBtn.addEventListener('click', () => {
       if (!currentUserId) {
         window.location.href = "login.html";
@@ -291,7 +306,7 @@
       els.cancelBtn.style.display = 'none';
     });
     
-    // Function to fetch food locations from Supabase
+    // פונקציה להבאת מיקומי מזון מ-Supabase
     async function fetchFoodLocations() {
       try {
         const now = Date.now();
@@ -305,7 +320,7 @@
       }
     }
     
-    // Reverse geocoding function
+    // פונקציה לגיאוקודינג הפוך
     async function reverseGeocode(lat, lng) {
       els.loadingSpinner.style.display = 'inline-block';
       try {
@@ -319,7 +334,7 @@
       }
     }
     
-    // Function to upload image to Supabase Storage
+    // פונקציה להעלאת תמונה ל-Supabase Storage
     async function uploadImage(file, id) {
       if (!file) return null;
       if (!file.type.startsWith("image/")) {
@@ -349,7 +364,7 @@
       }
     }
     
-    // Function to add a new food entry
+    // הוספת מיקום מזון חדש
     async function addNewFoodEntry() {
       const loc = els.location.value.trim();
       const food = els.food.value.trim();
@@ -384,7 +399,7 @@
           console.error("Insert error:", error);
           throw error; 
         }
-        // Clear fields on success
+        // איפוס שדות בהצלחה
         els.location.value = '';
         els.food.value = '';
         els.phone.value = '';
@@ -399,7 +414,7 @@
       }
     }
     
-    // Function to delete a food location
+    // מחיקת מיקום מזון
     async function deleteFoodLocation(id) {
       try {
         const { error } = await sb.from('food_locations').delete().eq('id', id);
@@ -410,7 +425,7 @@
       }
     }
     
-    // Function to update map markers
+    // עדכון סמני המפה
     function updateMapMarkers() {
       Object.values(markers).forEach(marker => { 
         if (!marker.isTemporary) map.removeLayer(marker);
@@ -419,7 +434,7 @@
       foodLocations.forEach(addMarkerForLocation);
     }
     
-    // Function to add a marker for a food entry
+    // הוספת סמן למיקום מזון
     function addMarkerForLocation(entry) {
       const marker = L.marker([entry.coordinates.lat, entry.coordinates.lng], { icon: createMarkerIcon() }).addTo(map);
       markers[entry.id] = marker;
@@ -459,7 +474,7 @@
         });
       }
       
-      // Star rating events
+      // אירועי דירוג עם כוכבים
       const stars = popupEl.querySelectorAll('.star');
       stars.forEach(star => {
         star.addEventListener('click', function() {
@@ -472,7 +487,7 @@
       });
     }
     
-    // Function to update the food list
+    // עדכון רשימת המיקומים
     function updateFoodList() {
       els.foodList.innerHTML = '';
       els.entriesCount.textContent = foodLocations.length;
@@ -503,35 +518,41 @@
       });
     }
     
-    // Mobile navigation toggle
-    let isMapView = false;
+    // פונקציית Toggle – משנה בין תצוגת הסרגל למפת מלאה
     els.toggleBtn.addEventListener('click', () => {
-      isMapView = !isMapView;
-      if (isMapView) {
-        // Show map container, hide sidebar
-        document.querySelector('.sidebar').style.display = 'none';
-        document.getElementById('map-container').style.display = 'block';
-        els.toggleBtn.innerHTML = '<i class="fas fa-arrow-left"></i>';
-        // Force map to re-render
-        setTimeout(() => map.invalidateSize(), 100);
+      const mainLayout = document.querySelector('.main-layout');
+      if (window.innerWidth >= 768) {
+        // במכשירי שולחן עבודה – שינוי בין סרגל + מפת לבין הצגת מפת מלאה
+        if (mainLayout.classList.contains('collapse-sidebar')) {
+          mainLayout.classList.remove('collapse-sidebar');
+          els.toggleBtn.innerHTML = '<i class="fas fa-arrow-left"></i>';
+        } else {
+          mainLayout.classList.add('collapse-sidebar');
+          els.toggleBtn.innerHTML = '<i class="fas fa-arrow-right"></i>';
+        }
       } else {
-        // Show sidebar, hide map container
-        document.querySelector('.sidebar').style.display = 'block';
-        document.getElementById('map-container').style.display = 'none';
-        els.toggleBtn.innerHTML = '<i class="fas fa-arrow-right"></i>';
+        // במכשירים ניידים – שינוי בין תצוגת הסרגל לתצוגת המפה
+        if (mainLayout.classList.contains('map-view')) {
+          mainLayout.classList.remove('map-view');
+          els.toggleBtn.innerHTML = '<i class="fas fa-arrow-right"></i>';
+        } else {
+          mainLayout.classList.add('map-view');
+          els.toggleBtn.innerHTML = '<i class="fas fa-arrow-left"></i>';
+          setTimeout(() => map.invalidateSize(), 100);
+        }
       }
     });
     
-    // Initialize the app when window loads
+    // אתחול האפליקציה עם טעינת חלון
     window.onload = async () => {
-      // Check user authentication session
+      // בדיקת סשן התחברות
       const { data: { session } } = await sb.auth.getSession();
       if (session && session.user) {
         currentUserId = session.user.id;
         els.submitBtn.disabled = false;
       } else {
         currentUserId = null;
-        els.submitBtn.disabled = false; // Allow clicking to redirect to login
+        els.submitBtn.disabled = false; // מאפשר לחיצה שתביא לעמוד התחברות
         els.submitBtn.textContent = "Log in to publish";
       }
       
