@@ -40,7 +40,7 @@
     .food-amount { background:#4361ee; color:#fff; border-radius:12px; font-size:0.8rem; padding:2px 6px; margin-left:0.5rem; }
     .loading-spinner { display:none; width:16px; height:16px; border:2px solid rgba(0,0,0,0.1); border-left-color:#4361ee; border-radius:50%; animation:spin 1s linear infinite; margin-left:8px; }
     @keyframes spin { to { transform:rotate(360deg); } }
-    /* סגנון חדש לפין המיקום */
+    /* עיצוב משופר לפין המיקום */
     .custom-marker {
       display:flex;
       justify-content:center;
@@ -184,7 +184,7 @@
     const els = {
       location: document.getElementById('location'),
       food: document.getElementById('food'),
-      phone: document.getElementById('phone'), // שדה הטלפון החדש
+      phone: document.getElementById('phone'),
       amount: document.getElementById('amount'),
       foodImage: document.getElementById('food-image'),
       imagePreview: document.getElementById('image-preview'),
@@ -199,7 +199,7 @@
     
     const formatTime = ms => `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
     
-    // שינוי: מעדכנים את האייקון של המיקום לפריט משופר
+    // מעדכנים את האייקון של המיקום עם עיצוב חדש
     const createMarkerIcon = isTemp => L.divIcon({
       className: `custom-marker${isTemp ? ' marker-temp' : ''}`,
       html: `<i class="fas fa-${isTemp ? 'crosshairs' : 'map-pin'}"></i>`,
@@ -236,7 +236,7 @@
     
     els.removeImage.addEventListener('click', removeImagePreview);
     
-    // עדכון: בעת לחיצה על כפתור הפרסום, אם המשתמש לא מחובר, נעביר אותו לדף ההתחברות
+    // בעת לחיצה על כפתור הפרסום, אם המשתמש לא מחובר – נשלח אותו לעמוד ההתחברות
     els.submitBtn.addEventListener('click', () => {
       if (!currentUserId) {
         window.location.href = "login.html";
@@ -260,7 +260,7 @@
         els.submitBtn.disabled = false;
       } else {
         currentUserId = null;
-        els.submitBtn.disabled = false; // מאפשרים לחיצה, אך יובילו להתחברות
+        els.submitBtn.disabled = false; // מאפשרים לחיצה שמובילה לעמוד התחברות
         els.submitBtn.textContent = "Log in to publish";
       }
       
@@ -373,7 +373,7 @@
     async function addNewFoodEntry() {
       const loc = els.location.value.trim();
       const food = els.food.value.trim();
-      const phone = els.phone.value.trim(); // שדה הטלפון
+      const phone = els.phone.value.trim();
       const amount = els.amount.value.trim();
       if (!loc || !food || !phone || !amount) {
         alert('Please fill in all fields!');
@@ -387,10 +387,11 @@
       try {
         let imageUrl = null;
         if (selectedImage) imageUrl = await uploadImage(selectedImage, now.toString());
+        // Prepare the entry object
         const entry = {
           location: loc,
           food,
-          phone, // שדה הטלפון
+          phone,
           amount: parseInt(amount),
           coordinates: { lat: selectedCoordinates[0], lng: selectedCoordinates[1] },
           timestamp: now,
@@ -400,7 +401,11 @@
         };
         console.log("Inserting entry:", entry);
         const { error } = await sb.from('food_locations').insert([entry]);
-        if (error) { console.error("Insert error:", error); throw error; }
+        if (error) { 
+          console.error("Insert error:", error);
+          throw error; 
+        }
+        // Clear fields on success
         els.location.value = '';
         els.food.value = '';
         els.phone.value = '';
@@ -411,7 +416,7 @@
         els.cancelBtn.style.display = 'none';
       } catch (e) {
         console.error("Error adding food location:", e);
-        alert("Error adding food location. Please try again.");
+        alert("Error adding food location. Please try again. Check the console for more details.");
       }
     }
     
@@ -422,19 +427,6 @@
       } catch (e) {
         console.error("Error deleting food location:", e);
         alert("Error deleting food location. Please try again.");
-      }
-    }
-    
-    async function fetchFoodLocations() {
-      try {
-        const now = Date.now();
-        const { data, error } = await sb.from('food_locations').select('*').gt('expiresAt', now);
-        if (error) throw error;
-        foodLocations = data || [];
-        updateMapMarkers();
-        updateFoodList();
-      } catch (e) {
-        console.error("Error fetching food locations:", e);
       }
     }
     
@@ -483,7 +475,7 @@
         });
       }
       
-      // אירועי דירוג עם כוכבים
+      // הוספת אירועי דירוג עם כוכבים
       const stars = popupEl.querySelectorAll('.star');
       stars.forEach(star => {
         star.addEventListener('click', function() {
