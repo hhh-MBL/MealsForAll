@@ -9,22 +9,21 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* Original CSS */
+    /* Original Styles */
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
     body { background:#f8f9fa; }
     .app-container { max-width:1200px; margin:auto; padding:1rem; }
-    .app-title { font-size:2rem; color:#4361ee; margin-bottom:1rem; text-align: center }
-    .header-links { text-align: center; margin-bottom: 1rem; }
-    .header-links a, .header-links button {
+    .app-header { text-align: center; margin-bottom: 1rem; }
+    .app-header h1 { font-size:2rem; color:#4361ee; }
+    .auth-links { text-align: center; margin-bottom: 1rem; }
+    .auth-links a {
       margin: 0 0.5rem;
       font-size: 1rem;
-      background: none;
-      border: none;
+      text-decoration: underline;
       color: #4361ee;
       cursor: pointer;
-      text-decoration: underline;
     }
-    .main-layout { display:grid; grid-template-columns:280px 1fr; gap:1rem; height:calc(100vh - 150px); }
+    .main-layout { display:grid; grid-template-columns:280px 1fr; gap:1rem; height:calc(100vh - 180px); }
     @media (max-width:768px){ .main-layout { grid-template-columns:1fr; height:auto; } }
     .sidebar, #map-container, #map { border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.05); }
     .sidebar { background:#fff; padding:1rem; display:flex; flex-direction:column; }
@@ -95,19 +94,126 @@
     .rating .star.selected {
       color: #FFD700;
     }
+    
+    /* --- Hamburger Popup Styles --- */
+    .hamburger-btn {
+      position: fixed;
+      top: 12px;
+      right: 8px;
+      z-index: 1100;
+      background: transparent;
+      border: none;
+      font-size: 32px;
+      cursor: pointer;
+      color: #4361ee;
+    }
+    .hamburger-popup {
+      position: fixed;
+      top: 0;
+      right: -320px;
+      width: 320px;
+      height: 100%;
+      background: #ffffff;
+      border-radius: 8px 0 0 8px;
+      box-shadow: -4px 0 15px rgba(0,0,0,0.2);
+      transition: right 0.3s ease;
+      z-index: 1050;
+      padding: 1.5rem;
+      overflow-y: auto;
+    }
+    .hamburger-popup.open {
+      right: 0;
+    }
+    .popup-close-btn {
+      background: transparent;
+      border: none;
+      font-size: 28px;
+      cursor: pointer;
+      color: #4361ee;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+    }
+    .popup-nav {
+      margin-top: 50px;
+      display: flex;
+      justify-content: space-around;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .nav-btn {
+      background: none;
+      border: none;
+      font-size: 1.1rem;
+      color: #333;
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+    }
+    .nav-btn.active {
+      color: #4361ee;
+      border-bottom: 2px solid #4361ee;
+    }
+    .popup-page {
+      display: none;
+    }
+    .popup-page.active {
+      display: block;
+    }
+    .popup-map {
+      width: 100%;
+      height: 300px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      margin-bottom: 1rem;
+    }
+    .popup-food-list {
+      font-size: 0.95rem;
+    }
+    .popup-food-list ul {
+      list-style: none;
+      padding: 0;
+    }
+    .popup-food-list ul li {
+      margin: 0.5rem 0;
+    }
+    .popup-food-list ul li a {
+      text-decoration: none;
+      color: #333;
+    }
+    .popup-food-list ul li a:hover {
+      color: #4361ee;
+    }
   </style>
 </head>
 <body>
-  <div class="app-container">
-    <!-- Header with Login/Register and Navigation Buttons -->
-    <div class="header-links">
-      <a href="login.html">התחברות</a> | 
-      <a href="register.html">הרשמה</a> | 
-      <button onclick="location.href='map.html'">Map Only</button> | 
-      <button onclick="location.href='about.html'">About</button>
+  <!-- Hamburger Popup HTML -->
+  <button id="hamburger-btn" class="hamburger-btn"><i class="fas fa-bars"></i></button>
+  <div id="hamburger-popup" class="hamburger-popup">
+    <button id="popup-close-btn" class="popup-close-btn"><i class="fas fa-times"></i></button>
+    <div class="popup-nav">
+      <button id="nav-map" class="nav-btn active">Map</button>
+      <button id="nav-about" class="nav-btn">About</button>
     </div>
-    <!-- Main MealsForAll Interface -->
-    <h1 class="app-title">MealsForAll</h1>
+    <div id="popup-page-map" class="popup-page active">
+      <div id="popup-map" class="popup-map"></div>
+      <div id="popup-food-list" class="popup-food-list"></div>
+    </div>
+    <div id="popup-page-about" class="popup-page">
+      <h3>About MealsForAll</h3>
+      <p>Edit this text to provide information about your application.</p>
+    </div>
+  </div>
+  
+  <!-- Main MealsForAll Interface -->
+  <div class="app-container">
+    <div class="app-header">
+      <h1>MealsForAll</h1>
+    </div>
+    <div class="auth-links">
+      <a href="login.html">התחברות</a> |
+      <a href="register.html">הרשמה</a>
+    </div>
     <div class="main-layout">
       <div class="sidebar">
         <div>
@@ -187,7 +293,6 @@
     
     let currentUserId = null;
     let map, markers = {}, selectedCoordinates = null, foodLocations = [], selectedImage = null;
-    
     const els = {
       location: document.getElementById('location'),
       food: document.getElementById('food'),
@@ -508,6 +613,78 @@
           console.log(`Rated ${rating} stars for entry ${entry.id}`);
         });
       });
+    }
+    
+    /* --- Hamburger Popup JavaScript --- */
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const hamburgerPopup = document.getElementById('hamburger-popup');
+    const popupCloseBtn = document.getElementById('popup-close-btn');
+    
+    hamburgerBtn.addEventListener('click', () => {
+      hamburgerPopup.classList.add('open');
+      if (document.getElementById('nav-map').classList.contains('active')) {
+        initPopupMap();
+        updatePopupFoodList();
+      }
+    });
+    
+    popupCloseBtn.addEventListener('click', () => {
+      hamburgerPopup.classList.remove('open');
+    });
+    
+    const navMap = document.getElementById('nav-map');
+    const navAbout = document.getElementById('nav-about');
+    const popupPageMap = document.getElementById('popup-page-map');
+    const popupPageAbout = document.getElementById('popup-page-about');
+    
+    navMap.addEventListener('click', () => {
+      navMap.classList.add('active');
+      navAbout.classList.remove('active');
+      popupPageMap.classList.add('active');
+      popupPageAbout.classList.remove('active');
+      initPopupMap();
+      updatePopupFoodList();
+    });
+    
+    navAbout.addEventListener('click', () => {
+      navAbout.classList.add('active');
+      navMap.classList.remove('active');
+      popupPageAbout.classList.add('active');
+      popupPageMap.classList.remove('active');
+    });
+    
+    let popupMap;
+    function initPopupMap() {
+      if (!popupMap) {
+        popupMap = L.map('popup-map', {
+          center: [31.7683, 35.2137],
+          zoom: 8,
+          zoomControl: false
+        });
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(popupMap);
+      } else {
+        popupMap.invalidateSize();
+      }
+    }
+    
+    function updatePopupFoodList() {
+      const foodListContainer = document.getElementById('popup-food-list');
+      if (!foodLocations.length) {
+        foodListContainer.innerHTML = '<p>No food locations available.</p>';
+        return;
+      }
+      let html = '<ul>';
+      foodLocations.forEach(entry => {
+        html += `<li><a href="#" onclick="focusPopupMap(${entry.coordinates.lat}, ${entry.coordinates.lng}); return false;">${entry.food} - ${entry.location}</a></li>`;
+      });
+      html += '</ul>';
+      foodListContainer.innerHTML = html;
+    }
+    
+    function focusPopupMap(lat, lng) {
+      if (popupMap) {
+        popupMap.setView([lat, lng], 15);
+      }
     }
   </script>
 </body>
