@@ -40,7 +40,20 @@
     .food-amount { background:#4361ee; color:#fff; border-radius:12px; font-size:0.8rem; padding:2px 6px; margin-left:0.5rem; }
     .loading-spinner { display:none; width:16px; height:16px; border:2px solid rgba(0,0,0,0.1); border-left-color:#4361ee; border-radius:50%; animation:spin 1s linear infinite; margin-left:8px; }
     @keyframes spin { to { transform:rotate(360deg); } }
-    .custom-marker { display:flex; justify-content:center; align-items:center; font-size:28px; color:#fff; background:#4361ee; border-radius:50%; width:48px; height:48px; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
+    /* סגנון חדש לפין המיקום */
+    .custom-marker {
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      font-size:28px;
+      color:#fff;
+      background: linear-gradient(135deg, #4361ee, #2a2a72);
+      border-radius:50%;
+      width:50px;
+      height:50px;
+      box-shadow:0 2px 5px rgba(0,0,0,0.3);
+      border: 2px solid #fff;
+    }
     .marker-temp { background:#ef233c; }
     .popup-content { padding:8px; position:relative; max-width:250px; }
     .popup-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
@@ -135,8 +148,12 @@
             </div>
           </div>
           <div class="form-group button-group">
-            <button id="submit-btn" class="btn btn-primary"><i class="fas fa-plus"></i> הוסף מיקום מזון</button>
-            <button id="cancel-btn" class="btn btn-danger"><i class="fas fa-times"></i> ביטול</button>
+            <button id="submit-btn" class="btn btn-primary">
+              <i class="fas fa-plus"></i> הוסף מיקום מזון
+            </button>
+            <button id="cancel-btn" class="btn btn-danger">
+              <i class="fas fa-times"></i> ביטול
+            </button>
           </div>
         </div>
         <div class="food-entries">
@@ -182,11 +199,12 @@
     
     const formatTime = ms => `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
     
+    // שינוי: מעדכנים את האייקון של המיקום לפריט משופר
     const createMarkerIcon = isTemp => L.divIcon({
       className: `custom-marker${isTemp ? ' marker-temp' : ''}`,
-      html: `<i class="fas fa-${isTemp ? 'crosshairs' : 'utensils'}"></i>`,
-      iconSize: [48, 48],
-      iconAnchor: [24, 24]
+      html: `<i class="fas fa-${isTemp ? 'crosshairs' : 'map-pin'}"></i>`,
+      iconSize: [50, 50],
+      iconAnchor: [25, 50]
     });
     
     const clearTemporaryMarkers = () => { 
@@ -217,7 +235,16 @@
     });
     
     els.removeImage.addEventListener('click', removeImagePreview);
-    els.submitBtn.addEventListener('click', addNewFoodEntry);
+    
+    // עדכון: בעת לחיצה על כפתור הפרסום, אם המשתמש לא מחובר, נעביר אותו לדף ההתחברות
+    els.submitBtn.addEventListener('click', () => {
+      if (!currentUserId) {
+        window.location.href = "login.html";
+        return;
+      }
+      addNewFoodEntry();
+    });
+    
     els.cancelBtn.addEventListener('click', () => {
       clearTemporaryMarkers();
       selectedCoordinates = null;
@@ -233,7 +260,7 @@
         els.submitBtn.disabled = false;
       } else {
         currentUserId = null;
-        els.submitBtn.disabled = true;
+        els.submitBtn.disabled = false; // מאפשרים לחיצה, אך יובילו להתחברות
         els.submitBtn.textContent = "Log in to publish";
       }
       
@@ -356,10 +383,6 @@
         alert('Please select a location on the map or type the full address.');
         return;
       }
-      if (!currentUserId) {
-        alert('You must be logged in to publish a location.');
-        return;
-      }
       const now = Date.now();
       try {
         let imageUrl = null;
@@ -429,7 +452,6 @@
         ? `<button class="delete-btn"><i class="fas fa-trash"></i> Delete</button>`
         : '';
       const imageHtml = entry.imageUrl ? `<img src="${entry.imageUrl}" class="popup-image" alt="Food Image">` : '';
-      // HTML להודעת הפופ-אפ כולל אזור לדירוג עם כוכבים
       const popupEl = document.createElement('div');
       popupEl.className = 'popup-content';
       popupEl.innerHTML = `<div class="popup-header">
@@ -461,7 +483,7 @@
         });
       }
       
-      // הוספת אירועי קליק לדירוג עם כוכבים
+      // אירועי דירוג עם כוכבים
       const stars = popupEl.querySelectorAll('.star');
       stars.forEach(star => {
         star.addEventListener('click', function() {
@@ -469,7 +491,6 @@
           stars.forEach(s => {
             s.classList.toggle('selected', parseInt(s.getAttribute('data-value')) <= rating);
           });
-          // אפשר לשמור את הדירוג או לשלוח אותו לשרת אם רוצים
           console.log(`Rated ${rating} stars for entry ${entry.id}`);
         });
       });
