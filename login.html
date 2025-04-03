@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MealsForAll - התחברות</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f8f9fa;
+      margin: 0;
+      padding: 0;
+      direction: rtl;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 400px;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #4361ee;
+      margin-bottom: 1rem;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.3rem;
+      font-weight: 600;
+    }
+    input[type="email"],
+    input[type="password"] {
+      width: 92%;
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1rem;
+      text-align: right;
+    }
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      background: #4361ee;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      cursor: pointer;
+      font-weight: 600;
+      margin-top: 1rem;
+    }
+    .link {
+      text-align: center;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+    .link a {
+      color: #4361ee;
+      text-decoration: none;
+      font-weight: 600;
+      margin: 0 8px;
+    }
+    .error {
+      color: #e74c3c;
+      margin-bottom: 1rem;
+      text-align: center;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MealsForAll</h1>
+    <h2>התחברות</h2>
+    <div id="error-message" class="error"></div>
+    <div class="form-group">
+      <label for="email">אימייל</label>
+      <input type="email" id="email" placeholder="name@example.com" />
+    </div>
+    <div class="form-group">
+      <label for="password">סיסמה</label>
+      <input type="password" id="password" placeholder="********" />
+    </div>
+    <button id="login-btn">התחבר</button>
+    <div class="link">
+      <a href="register.html">עדיין לא רשום? הרשם כאן</a> | 
+      <a href="index.html">חזרה לעמוד הראשי</a>
+    </div>
+  </div>
+  <script>
+    const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
+    const sb = supabase.createClient(supabaseUrl, supabaseKey);
+    
+    const loginBtn = document.getElementById('login-btn');
+    const errorMsg = document.getElementById('error-message');
+    
+    loginBtn.addEventListener('click', async () => {
+      errorMsg.textContent = '';
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      if (!email || !password) {
+        errorMsg.textContent = 'אנא מלא אימייל וסיסמה.';
+        return;
+      }
+      const { data, error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) {
+        errorMsg.textContent = 'שגיאה בהתחברות: ' + error.message;
+      } else {
+        // Successful login; redirect to index page.
+        window.location.href = 'index.html';
+      }
+    });
+  </script>
+</body>
+</html>
