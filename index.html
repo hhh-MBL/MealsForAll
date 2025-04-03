@@ -1,3 +1,6 @@
+Below is your updated code. I've added a hamburger button in the top-right corner and a hidden popup that slides in from the right when the button is clicked. All existing functions and structure remain unchanged.
+
+```html
 <!DOCTYPE html>
 <html lang="he">
 <head>
@@ -90,9 +93,64 @@
     .rating .star.selected {
       color: #FFD700;
     }
+
+    /* Hamburger button styles */
+    .hamburger-btn {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1100;
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #4361ee;
+    }
+    /* Popup sliding panel from the right */
+    .hamburger-popup {
+      position: fixed;
+      top: 0;
+      right: -300px;
+      width: 300px;
+      height: 100%;
+      background: #fff;
+      box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+      transition: right 0.3s ease;
+      z-index: 1050;
+      padding: 1rem;
+      overflow-y: auto;
+    }
+    .hamburger-popup.open {
+      right: 0;
+    }
+    .popup-close-btn {
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #4361ee;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+    }
   </style>
 </head>
 <body>
+  <!-- Hamburger Button -->
+  <button id="hamburger-btn" class="hamburger-btn"><i class="fas fa-bars"></i></button>
+  
+  <!-- Hamburger Popup Panel -->
+  <div id="hamburger-popup" class="hamburger-popup">
+    <button id="popup-close-btn" class="popup-close-btn"><i class="fas fa-times"></i></button>
+    <!-- Add any content you want in the popup here -->
+    <h3>Menu</h3>
+    <ul style="list-style:none; padding:0;">
+      <li><a href="login.html">התחברות</a></li>
+      <li><a href="register.html">הרשמה</a></li>
+      <!-- Additional menu items can be added here -->
+    </ul>
+  </div>
+
   <div class="app-container">
     <!-- Logo נשאר באנגלית -->
     <h1 class="app-title">MealsForAll</h1>
@@ -525,6 +583,22 @@
         els.foodList.appendChild(listItem);
       });
     }
+    
+    // Hamburger Popup Toggle Functionality
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const hamburgerPopup = document.getElementById('hamburger-popup');
+    const popupCloseBtn = document.getElementById('popup-close-btn');
+    
+    hamburgerBtn.addEventListener('click', () => {
+      hamburgerPopup.classList.add('open');
+    });
+    
+    popupCloseBtn.addEventListener('click', () => {
+      hamburgerPopup.classList.remove('open');
+    });
   </script>
 </body>
 </html>
+```
+
+In this version, a fixed hamburger button (three lines) is added that opens a right-side sliding popup when clicked, and a close button inside the popup removes it. All original functions and layout remain unchanged.
