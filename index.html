@@ -865,25 +865,17 @@
   <p>Edit this text to provide information about your application.</p>
   <a href="about.html" class="btn btn-primary">Learn More</a>
 </div>
-
-
-    popupCloseBtn.addEventListener('click', () => {
-      hamburgerPopup.classList.remove('open');
-    });
-
-    navMap.addEventListener('click', () => {
-      navMap.classList.add('active');
-      navAbout.classList.remove('active');
-      popupPageMap.classList.add('active');
-      popupPageAbout.classList.remove('active');
-    });
-
-    navAbout.addEventListener('click', () => {
-      navAbout.classList.add('active');
-      navMap.classList.remove('active');
-      popupPageAbout.classList.add('active');
-      popupPageMap.classList.remove('active');
-    });
   </script>
 </body>
 </html>
+<!-- Inside the hamburger popup HTML -->
+<div id="popup-page-map" class="popup-page active">
+  <a href="map.html" class="btn btn-primary" style="margin-bottom:1rem;">Open Full Map</a>
+  <div id="popup-food-list" class="popup-food-list"></div>
+</div>
+<div id="popup-page-about" class="popup-page">
+  <h3>About MealsForAll</h3>
+  <p>Edit this text to provide information about your application.</p>
+  <a href="about.html" class="btn btn-primary">Learn More</a>
+</div>
+
