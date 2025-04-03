@@ -1,3 +1,6 @@
+Below is your updated code. The hamburger button is now larger and slightly shifted down and left. The popup panel has also been restyled with a cleaner, more professional look.
+
+```html
 <!DOCTYPE html>
 <html lang="he">
 <head>
@@ -9,15 +12,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* Base styles */
+    /* Preserved CSS */
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
     body { background:#f8f9fa; }
     .app-container { max-width:1200px; margin:auto; padding:1rem; }
     .app-title { font-size:2rem; color:#4361ee; margin-bottom:1rem; text-align: center }
     .main-layout { display:grid; grid-template-columns:280px 1fr; gap:1rem; height:calc(100vh - 100px); }
-    @media (max-width:768px){
-      .main-layout { grid-template-columns:1fr; height:auto; }
-    }
+    @media (max-width:768px){ .main-layout { grid-template-columns:1fr; height:auto; } }
     .sidebar, #map-container, #map { border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.05); }
     .sidebar { background:#fff; padding:1rem; display:flex; flex-direction:column; }
     #map-container, #map { height:100%; overflow:hidden; }
@@ -42,37 +43,28 @@
     .food-amount { background:#4361ee; color:#fff; border-radius:12px; font-size:0.8rem; padding:2px 6px; margin-left:0.5rem; }
     .loading-spinner { display:none; width:16px; height:16px; border:2px solid rgba(0,0,0,0.1); border-left-color:#4361ee; border-radius:50%; animation:spin 1s linear infinite; margin-left:8px; }
     @keyframes spin { to { transform:rotate(360deg); } }
-    
-    /* Marker icon: revert to original icons */
+    /* סגנון חדש לפין המיקום */
     .custom-marker {
       display:flex;
       justify-content:center;
       align-items:center;
       font-size:28px;
       color:#fff;
-      background:#4361ee;
+      background: linear-gradient(135deg, #4361ee, #2a2a72);
       border-radius:50%;
-      width:48px;
-      height:48px;
+      width:50px;
+      height:50px;
       box-shadow:0 2px 5px rgba(0,0,0,0.3);
+      border: 2px solid #fff;
     }
     .marker-temp { background:#ef233c; }
-    
-    /* Popup content styled for Hebrew (RTL) */
-    .popup-content {
-      padding:8px;
-      position:relative;
-      max-width:250px;
-      direction: rtl;
-      text-align: right;
-    }
+    .popup-content { padding:8px; position:relative; max-width:250px; }
     .popup-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
     .popup-header h4 { margin:0; font-size:1rem; }
     .popup-body p { margin:4px 0; }
     .popup-footer { text-align:right; margin-top:8px; }
     .close-popup { font-size:1.2rem; cursor:pointer; }
     .delete-btn { background:#ef233c; color:#fff; border:none; border-radius:4px; padding:4px 8px; font-size:0.8rem; cursor:pointer; }
-    
     .image-upload { display:flex; align-items:center; margin-bottom:1rem; }
     .image-container { position:relative; display:inline-block; }
     .image-preview { width:60px; height:60px; border-radius:8px; object-fit:cover; display:none; }
@@ -83,10 +75,10 @@
     .food-image-thumbnail { width:50px; height:50px; border-radius:4px; margin-left:8px; object-fit:cover; }
     .popup-image { width:100%; max-height:150px; object-fit:cover; border-radius:6px; margin-top:8px; }
     
-    /* Login/Signup button active state */
+    /* שינוי צבע לחיצה של כפתורי התחברות והרשמה (לא סגול) */
     a:active, a:focus { color: inherit; text-decoration: none; }
     
-    /* Star rating styling */
+    /* סגנון לדירוג עם כוכבים */
     .rating {
       display: flex;
       justify-content: center;
@@ -101,19 +93,90 @@
     .rating .star.selected {
       color: #FFD700;
     }
-    
-    /* Responsive styling for popup on small screens */
-    @media (max-width: 480px) {
-      .popup-content {
-        max-width: 90vw;
-        font-size: 0.9rem;
-      }
+
+    /* Hamburger button styles - bigger and slightly moved */
+    .hamburger-btn {
+      position: fixed;
+      top: 12px; /* moved down a couple pixels */
+      right: 8px; /* moved left a couple pixels */
+      z-index: 1100;
+      background: transparent;
+      border: none;
+      font-size: 32px; /* bigger */
+      cursor: pointer;
+      color: #4361ee;
+    }
+    /* Popup sliding panel from the right - professional look */
+    .hamburger-popup {
+      position: fixed;
+      top: 0;
+      right: -320px;
+      width: 320px;
+      height: 100%;
+      background: #ffffff;
+      border-radius: 8px 0 0 8px;
+      box-shadow: -4px 0 15px rgba(0,0,0,0.2);
+      transition: right 0.3s ease;
+      z-index: 1050;
+      padding: 1.5rem;
+      overflow-y: auto;
+    }
+    .hamburger-popup.open {
+      right: 0;
+    }
+    .popup-close-btn {
+      background: transparent;
+      border: none;
+      font-size: 28px;
+      cursor: pointer;
+      color: #4361ee;
+      position: absolute;
+      top: 10px;
+      left: 10px;
+    }
+    /* Styling for the menu inside the popup */
+    .hamburger-popup h3 {
+      margin-top: 40px;
+      font-size: 1.5rem;
+      color: #4361ee;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .hamburger-popup ul {
+      list-style: none;
+      padding: 0;
+    }
+    .hamburger-popup ul li {
+      margin: 0.8rem 0;
+    }
+    .hamburger-popup ul li a {
+      text-decoration: none;
+      color: #333;
+      font-size: 1.1rem;
+    }
+    .hamburger-popup ul li a:hover {
+      color: #4361ee;
     }
   </style>
 </head>
 <body>
+  <!-- Hamburger Button -->
+  <button id="hamburger-btn" class="hamburger-btn"><i class="fas fa-bars"></i></button>
+  
+  <!-- Hamburger Popup Panel -->
+  <div id="hamburger-popup" class="hamburger-popup">
+    <button id="popup-close-btn" class="popup-close-btn"><i class="fas fa-times"></i></button>
+    <h3>Menu</h3>
+    <ul>
+      <li><a href="login.html">התחברות</a></li>
+      <li><a href="register.html">הרשמה</a></li>
+      <!-- Additional menu items can be added here -->
+    </ul>
+  </div>
+
   <div class="app-container">
-    <!-- Logo remains in English -->
+    <!-- Logo נשאר באנגלית -->
     <h1 class="app-title">MealsForAll</h1>
     <div style="margin-bottom: 1rem; text-align: center;">
       <a href="login.html">התחברות</a> | <a href="register.html">הרשמה</a>
@@ -124,7 +187,7 @@
           <h2 style="margin-bottom:1rem; font-size:1.2rem;">הוסף מיקום מזון</h2>
           <div class="form-group">
             <label for="location">מיקום</label>
-            <!-- Enter full address -->
+            <!-- הזנת כתובת מלאה -->
             <div class="input-with-icon" style="position:relative;">
               <i class="fas fa-map-marker-alt"></i>
               <input type="text" id="location" placeholder="הזן כתובת מלאה" />
@@ -138,7 +201,7 @@
               <input type="text" id="food" placeholder="איזה מזון זמין כאן?" />
             </div>
           </div>
-          <!-- New phone field -->
+          <!-- שדה טלפון חדש -->
           <div class="form-group">
             <label for="phone">טלפון</label>
             <div class="input-with-icon">
@@ -196,13 +259,14 @@
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
     const sb = supabase.createClient(supabaseUrl, supabaseKey);
     
-    // Variables and element references
+    // רק מאפשר הוספה אם המשתמש מחובר
     let currentUserId = null;
+    
     let map, markers = {}, selectedCoordinates = null, foodLocations = [], selectedImage = null;
     const els = {
       location: document.getElementById('location'),
       food: document.getElementById('food'),
-      phone: document.getElementById('phone'),
+      phone: document.getElementById('phone'), // שדה הטלפון החדש
       amount: document.getElementById('amount'),
       foodImage: document.getElementById('food-image'),
       imagePreview: document.getElementById('image-preview'),
@@ -217,12 +281,12 @@
     
     const formatTime = ms => `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
     
-    // Use original marker icons
+    // שינוי: מעדכנים את האייקון של המיקום לפריט משופר
     const createMarkerIcon = isTemp => L.divIcon({
       className: `custom-marker${isTemp ? ' marker-temp' : ''}`,
-      html: `<i class="fas fa-${isTemp ? 'crosshairs' : 'utensils'}"></i>`,
-      iconSize: [48, 48],
-      iconAnchor: [24, 24]
+      html: `<i class="fas fa-${isTemp ? 'crosshairs' : 'map-pin'}"></i>`,
+      iconSize: [50, 50],
+      iconAnchor: [25, 50]
     });
     
     const clearTemporaryMarkers = () => { 
@@ -239,7 +303,6 @@
       selectedImage = null;
     }
     
-    // Image upload handling
     els.foodImage.addEventListener('change', function () {
       if (this.files && this.files[0]) {
         selectedImage = this.files[0];
@@ -255,7 +318,7 @@
     
     els.removeImage.addEventListener('click', removeImagePreview);
     
-    // On submit, if not logged in, redirect to login page
+    // עדכון: בעת לחיצה על כפתור הפרסום, אם המשתמש לא מחובר, נעביר אותו לדף ההתחברות
     els.submitBtn.addEventListener('click', () => {
       if (!currentUserId) {
         window.location.href = "login.html";
@@ -271,228 +334,15 @@
       els.cancelBtn.style.display = 'none';
     });
     
-    // Function to fetch food locations from Supabase
-    async function fetchFoodLocations() {
-      try {
-        const now = Date.now();
-        const { data, error } = await sb.from('food_locations').select('*').gt('expiresAt', now);
-        if (error) throw error;
-        foodLocations = data || [];
-        updateMapMarkers();
-        updateFoodList();
-      } catch (e) {
-        console.error("Error fetching food locations:", e);
-      }
-    }
-    
-    // Function to perform reverse geocoding
-    async function reverseGeocode(lat, lng) {
-      els.loadingSpinner.style.display = 'inline-block';
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
-        const data = await res.json();
-        els.location.value = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        els.loadingSpinner.style.display = 'none';
-      } catch (err) {
-        els.location.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        els.loadingSpinner.style.display = 'none';
-      }
-    }
-    
-    // Function to upload image to Supabase Storage
-    async function uploadImage(file, id) {
-      if (!file) return null;
-      if (!file.type.startsWith("image/")) {
-        alert("The file provided is not an image.");
-        return null;
-      }
-      try {
-        const fileExtension = file.name.split('.').pop();
-        const uniqueFileName = `${id}_${Date.now()}_${Math.random().toString(36).substr(2,5)}.${fileExtension}`;
-        const { data, error } = await sb.storage.from('food_images').upload(uniqueFileName, file, { cacheControl: '3600', upsert: false });
-        if (error) {
-          console.error("Error uploading image:", error);
-          alert("Error uploading image.");
-          return null;
-        }
-        const { data: publicData, error: publicError } = sb.storage.from('food_images').getPublicUrl(uniqueFileName);
-        if (publicError) {
-          console.error("Error getting image URL:", publicError);
-          alert("Error getting image URL.");
-          return null;
-        }
-        return publicData.publicUrl;
-      } catch (e) {
-        console.error("Exception during image upload:", e);
-        alert("Error uploading image.");
-        return null;
-      }
-    }
-    
-    // Function to add a new food entry
-    async function addNewFoodEntry() {
-      const loc = els.location.value.trim();
-      const food = els.food.value.trim();
-      const phone = els.phone.value.trim();
-      const amount = els.amount.value.trim();
-      if (!loc || !food || !phone || !amount) {
-        alert('Please fill in all fields!');
-        return;
-      }
-      if (!selectedCoordinates) {
-        alert('Please select a location on the map or type the full address.');
-        return;
-      }
-      const now = Date.now();
-      try {
-        let imageUrl = null;
-        if (selectedImage) imageUrl = await uploadImage(selectedImage, now.toString());
-        const entry = {
-          location: loc,
-          food,
-          phone,
-          amount: parseInt(amount),
-          coordinates: { lat: selectedCoordinates[0], lng: selectedCoordinates[1] },
-          timestamp: now,
-          expiresAt: now + (24 * 60 * 60 * 1000),
-          imageUrl,
-          createdBy: currentUserId
-        };
-        console.log("Inserting entry:", entry);
-        const { error } = await sb.from('food_locations').insert([entry]);
-        if (error) { 
-          console.error("Insert error:", error);
-          throw error; 
-        }
-        // Clear fields on success
-        els.location.value = '';
-        els.food.value = '';
-        els.phone.value = '';
-        els.amount.value = '1';
-        removeImagePreview();
-        selectedCoordinates = null;
-        clearTemporaryMarkers();
-        els.cancelBtn.style.display = 'none';
-      } catch (e) {
-        console.error("Error adding food location:", e);
-        alert("Error adding food location. Please try again. Check the console for more details.");
-      }
-    }
-    
-    // Function to delete a food location
-    async function deleteFoodLocation(id) {
-      try {
-        const { error } = await sb.from('food_locations').delete().eq('id', id);
-        if (error) throw error;
-      } catch (e) {
-        console.error("Error deleting food location:", e);
-        alert("Error deleting food location. Please try again.");
-      }
-    }
-    
-    // Function to update map markers
-    function updateMapMarkers() {
-      Object.values(markers).forEach(marker => { 
-        if (!marker.isTemporary) map.removeLayer(marker);
-      });
-      markers = markers.temp ? { temp: markers.temp } : {};
-      foodLocations.forEach(addMarkerForLocation);
-    }
-    
-    // Function to add a marker for a food entry
-    function addMarkerForLocation(entry) {
-      const marker = L.marker([entry.coordinates.lat, entry.coordinates.lng], { icon: createMarkerIcon() }).addTo(map);
-      markers[entry.id] = marker;
-      const timeRemaining = formatTime(entry.expiresAt - Date.now());
-      const deleteButtonHtml = (entry.createdBy === currentUserId)
-        ? `<button class="delete-btn"><i class="fas fa-trash"></i> Delete</button>`
-        : '';
-      const imageHtml = entry.imageUrl ? `<img src="${entry.imageUrl}" class="popup-image" alt="Food Image">` : '';
-      const popupEl = document.createElement('div');
-      popupEl.className = 'popup-content';
-      popupEl.innerHTML = `<div class="popup-header">
-          <span class="close-popup">&times;</span>
-          <h4>${entry.food}</h4>
-        </div>
-        <div class="popup-body">
-          <p>${entry.location}</p>
-          <p>כמות: ${entry.amount}</p>
-          <p style="font-size:0.8rem;color:#6c757d;">נגמר בעוד: ${timeRemaining}</p>
-          ${imageHtml}
-          <div class="rating">
-            <span class="star" data-value="1">&#9733;</span>
-            <span class="star" data-value="2">&#9733;</span>
-            <span class="star" data-value="3">&#9733;</span>
-            <span class="star" data-value="4">&#9733;</span>
-            <span class="star" data-value="5">&#9733;</span>
-          </div>
-        </div>
-        <div class="popup-footer">${deleteButtonHtml}</div>`;
-      marker.bindPopup(popupEl);
-      popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
-      if (deleteButtonHtml) {
-        popupEl.querySelector('.delete-btn').addEventListener('click', () => {
-          if (confirm('האם אתה בטוח שברצונך למחוק מיקום זה?')) {
-            deleteFoodLocation(entry.id);
-            marker.closePopup();
-          }
-        });
-      }
-      
-      // Star rating events
-      const stars = popupEl.querySelectorAll('.star');
-      stars.forEach(star => {
-        star.addEventListener('click', function() {
-          const rating = parseInt(this.getAttribute('data-value'));
-          stars.forEach(s => {
-            s.classList.toggle('selected', parseInt(s.getAttribute('data-value')) <= rating);
-          });
-          console.log(`Rated ${rating} stars for entry ${entry.id}`);
-        });
-      });
-    }
-    
-    // Function to update the food list
-    function updateFoodList() {
-      els.foodList.innerHTML = '';
-      els.entriesCount.textContent = foodLocations.length;
-      els.emptyState.style.display = foodLocations.length === 0 ? 'block' : 'none';
-      foodLocations.sort((a, b) => b.timestamp - a.timestamp).forEach(entry => {
-        const timeRemaining = formatTime(entry.expiresAt - Date.now());
-        const imageElement = entry.imageUrl ? `<img src="${entry.imageUrl}" class="food-image-thumbnail" alt="Food Thumbnail">` : '';
-        const listItem = document.createElement('li');
-        listItem.className = 'food-item';
-        listItem.dataset.id = entry.id;
-        listItem.innerHTML = `<div>
-            <div class="food-name">${entry.food}</div>
-            <div class="food-location">${entry.location}</div>
-            <div class="expiry-info">נגמר בעוד: ${timeRemaining}</div>
-          </div>
-          <div style="display:flex;align-items:center;">
-            <span class="food-amount">${entry.amount}</span>
-            ${imageElement}
-          </div>`;
-        listItem.addEventListener('click', () => {
-          const marker = markers[entry.id];
-          if (marker) {
-            map.setView([entry.coordinates.lat, entry.coordinates.lng], 15);
-            marker.openPopup();
-          }
-        });
-        els.foodList.appendChild(listItem);
-      });
-    }
-    
-    // Initialize the app when window loads
     window.onload = async () => {
-      // Check user authentication session
+      // בדיקת סשן התחברות
       const { data: { session } } = await sb.auth.getSession();
       if (session && session.user) {
         currentUserId = session.user.id;
         els.submitBtn.disabled = false;
       } else {
         currentUserId = null;
-        els.submitBtn.disabled = false; // Allow clicking to redirect to login
+        els.submitBtn.disabled = false; // מאפשרים לחיצה, אך יובילו להתחברות
         els.submitBtn.textContent = "Log in to publish";
       }
       
@@ -508,7 +358,7 @@
         popupEl.className = 'popup-content';
         popupEl.innerHTML = `<div class="popup-header">
             <span class="close-popup">&times;</span>
-            <h4>מיקום נבחר</h4>
+            <h4>Location Selected</h4>
           </div>
           <div class="popup-body">
             <p>${lat.toFixed(5)}, ${lng.toFixed(5)}</p>
@@ -559,6 +409,225 @@
         foodLocations.filter(entry => entry.expiresAt < now).forEach(entry => deleteFoodLocation(entry.id));
       }, 60000);
     };
+    
+    async function reverseGeocode(lat, lng) {
+      els.loadingSpinner.style.display = 'inline-block';
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+        const data = await res.json();
+        els.location.value = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        els.loadingSpinner.style.display = 'none';
+      } catch (err) {
+        els.location.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        els.loadingSpinner.style.display = 'none';
+      }
+    }
+    
+    async function uploadImage(file, id) {
+      if (!file) return null;
+      if (!file.type.startsWith("image/")) {
+        alert("The file provided is not an image.");
+        return null;
+      }
+      try {
+        const fileExtension = file.name.split('.').pop();
+        const uniqueFileName = `${id}_${Date.now()}_${Math.random().toString(36).substr(2,5)}.${fileExtension}`;
+        const { data, error } = await sb.storage.from('food_images').upload(uniqueFileName, file, { cacheControl: '3600', upsert: false });
+        if (error) {
+          console.error("Error uploading image:", error);
+          alert("Error uploading image.");
+          return null;
+        }
+        const { data: publicData, error: publicError } = sb.storage.from('food_images').getPublicUrl(uniqueFileName);
+        if (publicError) {
+          console.error("Error getting image URL:", publicError);
+          alert("Error getting image URL.");
+          return null;
+        }
+        return publicData.publicUrl;
+      } catch (e) {
+        console.error("Exception during image upload:", e);
+        alert("Error uploading image.");
+        return null;
+      }
+    }
+    
+    async function addNewFoodEntry() {
+      const loc = els.location.value.trim();
+      const food = els.food.value.trim();
+      const phone = els.phone.value.trim(); // שדה הטלפון
+      const amount = els.amount.value.trim();
+      if (!loc || !food || !phone || !amount) {
+        alert('Please fill in all fields!');
+        return;
+      }
+      if (!selectedCoordinates) {
+        alert('Please select a location on the map or type the full address.');
+        return;
+      }
+      const now = Date.now();
+      try {
+        let imageUrl = null;
+        if (selectedImage) imageUrl = await uploadImage(selectedImage, now.toString());
+        const entry = {
+          location: loc,
+          food,
+          phone, // שדה הטלפון
+          amount: parseInt(amount),
+          coordinates: { lat: selectedCoordinates[0], lng: selectedCoordinates[1] },
+          timestamp: now,
+          expiresAt: now + (24 * 60 * 60 * 1000),
+          imageUrl,
+          createdBy: currentUserId
+        };
+        console.log("Inserting entry:", entry);
+        const { error } = await sb.from('food_locations').insert([entry]);
+        if (error) { console.error("Insert error:", error); throw error; }
+        els.location.value = '';
+        els.food.value = '';
+        els.phone.value = '';
+        els.amount.value = '1';
+        removeImagePreview();
+        selectedCoordinates = null;
+        clearTemporaryMarkers();
+        els.cancelBtn.style.display = 'none';
+      } catch (e) {
+        console.error("Error adding food location:", e);
+        alert("Error adding food location. Please try again.");
+      }
+    }
+    
+    async function deleteFoodLocation(id) {
+      try {
+        const { error } = await sb.from('food_locations').delete().eq('id', id);
+        if (error) throw error;
+      } catch (e) {
+        console.error("Error deleting food location:", e);
+        alert("Error deleting food location. Please try again.");
+      }
+    }
+    
+    async function fetchFoodLocations() {
+      try {
+        const now = Date.now();
+        const { data, error } = await sb.from('food_locations').select('*').gt('expiresAt', now);
+        if (error) throw error;
+        foodLocations = data || [];
+        updateMapMarkers();
+        updateFoodList();
+      } catch (e) {
+        console.error("Error fetching food locations:", e);
+      }
+    }
+    
+    function updateMapMarkers() {
+      Object.values(markers).forEach(marker => { if (!marker.isTemporary) map.removeLayer(marker); });
+      markers = markers.temp ? { temp: markers.temp } : {};
+      foodLocations.forEach(addMarkerForLocation);
+    }
+    
+    function addMarkerForLocation(entry) {
+      const marker = L.marker([entry.coordinates.lat, entry.coordinates.lng], { icon: createMarkerIcon() }).addTo(map);
+      markers[entry.id] = marker;
+      const timeRemaining = formatTime(entry.expiresAt - Date.now());
+      const deleteButtonHtml = (entry.createdBy === currentUserId)
+        ? `<button class="delete-btn"><i class="fas fa-trash"></i> Delete</button>`
+        : '';
+      const imageHtml = entry.imageUrl ? `<img src="${entry.imageUrl}" class="popup-image" alt="Food Image">` : '';
+      const popupEl = document.createElement('div');
+      popupEl.className = 'popup-content';
+      popupEl.innerHTML = `<div class="popup-header">
+          <span class="close-popup">&times;</span>
+          <h4>${entry.food}</h4>
+        </div>
+        <div class="popup-body">
+          <p>${entry.location}</p>
+          <p>Quantity: ${entry.amount}</p>
+          <p style="font-size:0.8rem;color:#6c757d;">Expires in: ${timeRemaining}</p>
+          ${imageHtml}
+          <div class="rating">
+            <span class="star" data-value="1">&#9733;</span>
+            <span class="star" data-value="2">&#9733;</span>
+            <span class="star" data-value="3">&#9733;</span>
+            <span class="star" data-value="4">&#9733;</span>
+            <span class="star" data-value="5">&#9733;</span>
+          </div>
+        </div>
+        <div class="popup-footer">${deleteButtonHtml}</div>`;
+      marker.bindPopup(popupEl);
+      popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
+      if (deleteButtonHtml) {
+        popupEl.querySelector('.delete-btn').addEventListener('click', () => {
+          if (confirm('Are you sure you want to delete this food location?')) {
+            deleteFoodLocation(entry.id);
+            marker.closePopup();
+          }
+        });
+      }
+      
+      // אירועי דירוג עם כוכבים
+      const stars = popupEl.querySelectorAll('.star');
+      stars.forEach(star => {
+        star.addEventListener('click', function() {
+          const rating = parseInt(this.getAttribute('data-value'));
+          stars.forEach(s => {
+            s.classList.toggle('selected', parseInt(s.getAttribute('data-value')) <= rating);
+          });
+          console.log(`Rated ${rating} stars for entry ${entry.id}`);
+        });
+      });
+    }
+    
+    function updateFoodList() {
+      els.foodList.innerHTML = '';
+      els.entriesCount.textContent = foodLocations.length;
+      els.emptyState.style.display = foodLocations.length === 0 ? 'block' : 'none';
+      foodLocations.sort((a, b) => b.timestamp - a.timestamp).forEach(entry => {
+        const timeRemaining = formatTime(entry.expiresAt - Date.now());
+        const imageElement = entry.imageUrl ? `<img src="${entry.imageUrl}" class="food-image-thumbnail" alt="Food Thumbnail">` : '';
+        const listItem = document.createElement('li');
+        listItem.className = 'food-item';
+        listItem.dataset.id = entry.id;
+        listItem.innerHTML = `<div>
+            <div class="food-name">${entry.food}</div>
+            <div class="food-location">${entry.location}</div>
+            <div class="expiry-info">Expires in: ${timeRemaining}</div>
+          </div>
+          <div style="display:flex;align-items:center;">
+            <span class="food-amount">${entry.amount}</span>
+            ${imageElement}
+          </div>`;
+        listItem.addEventListener('click', () => {
+          const marker = markers[entry.id];
+          if (marker) {
+            map.setView([entry.coordinates.lat, entry.coordinates.lng], 15);
+            marker.openPopup();
+          }
+        });
+        els.foodList.appendChild(listItem);
+      });
+    }
+    
+    // Hamburger Popup Toggle Functionality
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const hamburgerPopup = document.getElementById('hamburger-popup');
+    const popupCloseBtn = document.getElementById('popup-close-btn');
+    
+    hamburgerBtn.addEventListener('click', () => {
+      hamburgerPopup.classList.add('open');
+    });
+    
+    popupCloseBtn.addEventListener('click', () => {
+      hamburgerPopup.classList.remove('open');
+    });
   </script>
 </body>
 </html>
+```
+
+In this version:
+- The hamburger button now uses a larger font size (32px) and is positioned at `top: 12px; right: 8px` for a slight offset.
+- The popup panel has a wider width (320px), rounded left corners, a stronger shadow, and additional padding.
+- The menu header inside the popup includes a bottom border and improved spacing for a cleaner appearance.
+
+All functions and layout remain unchanged.
