@@ -35,7 +35,7 @@
     input { width:100%; padding:0.7rem 1rem 0.7rem 2rem; border:1px solid #dee2e6; border-radius:8px; }
     input:focus { outline:none; border-color:#4361ee; }
     .btn { padding:0.7rem; border:none; border-radius:8px; font-weight:500; cursor:pointer; }
-    .btn-primary { background:#4361ee; color:#fff; width:100%; }
+    .btn-primary { background:#4361ee; color:#fff; width:100%; text-align:center; text-decoration:none; display:inline-block; }
     .btn-danger { background:#ef233c; color:#fff; }
     .button-group { display:flex; gap:0.5rem; }
     #cancel-btn { display:none; }
@@ -160,13 +160,6 @@
     .popup-page.active {
       display: block;
     }
-    .popup-map {
-      width: 100%;
-      height: 300px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      margin-bottom: 1rem;
-    }
     .popup-food-list {
       font-size: 0.95rem;
     }
@@ -184,6 +177,20 @@
     .popup-food-list ul li a:hover {
       color: #4361ee;
     }
+    /* Additional styles for popup auth links */
+    .auth-links-popup {
+      text-align: center;
+      margin-top: 1rem;
+      border-top: 1px solid #eee;
+      padding-top: 1rem;
+    }
+    .auth-links-popup a {
+      margin: 0 0.5rem;
+      font-size: 1rem;
+      text-decoration: underline;
+      color: #4361ee;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -195,13 +202,23 @@
       <button id="nav-map" class="nav-btn active">Map</button>
       <button id="nav-about" class="nav-btn">About</button>
     </div>
+    <!-- Popup Page: Map -->
     <div id="popup-page-map" class="popup-page active">
-      <div id="popup-map" class="popup-map"></div>
+      <!-- Button linking to separate map page -->
+      <a href="map.html" class="btn btn-primary" style="margin-bottom:1rem;">Open Full Map</a>
       <div id="popup-food-list" class="popup-food-list"></div>
     </div>
+    <!-- Popup Page: About -->
     <div id="popup-page-about" class="popup-page">
       <h3>About MealsForAll</h3>
       <p>Edit this text to provide information about your application.</p>
+      <!-- Button linking to a separate about page -->
+      <a href="about.html" class="btn btn-primary">Learn More</a>
+    </div>
+    <!-- Additional Authentication Links in Popup -->
+    <div class="auth-links-popup">
+      <a href="login.html">Login</a> |
+      <a href="register.html">Register</a>
     </div>
   </div>
   
@@ -622,10 +639,6 @@
     
     hamburgerBtn.addEventListener('click', () => {
       hamburgerPopup.classList.add('open');
-      if (document.getElementById('nav-map').classList.contains('active')) {
-        initPopupMap();
-        updatePopupFoodList();
-      }
     });
     
     popupCloseBtn.addEventListener('click', () => {
@@ -642,8 +655,6 @@
       navAbout.classList.remove('active');
       popupPageMap.classList.add('active');
       popupPageAbout.classList.remove('active');
-      initPopupMap();
-      updatePopupFoodList();
     });
     
     navAbout.addEventListener('click', () => {
@@ -653,18 +664,15 @@
       popupPageMap.classList.remove('active');
     });
     
-    let popupMap;
-    function initPopupMap() {
-      if (!popupMap) {
-        popupMap = L.map('popup-map', {
-          center: [31.7683, 35.2137],
-          zoom: 8,
-          zoomControl: false
-        });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(popupMap);
-      } else {
-        popupMap.invalidateSize();
+    async function fetchFoodLocations() {
+      const { data, error } = await sb.from('food_locations').select('*');
+      if (error) {
+        console.error("Error fetching food locations:", error);
+        return;
       }
+      foodLocations = data;
+      foodLocations.forEach(addMarkerForLocation);
+      updateFoodList();
     }
     
     function updatePopupFoodList() {
@@ -675,16 +683,10 @@
       }
       let html = '<ul>';
       foodLocations.forEach(entry => {
-        html += `<li><a href="#" onclick="focusPopupMap(${entry.coordinates.lat}, ${entry.coordinates.lng}); return false;">${entry.food} - ${entry.location}</a></li>`;
+        html += `<li><a href="#" onclick="map.setView([${entry.coordinates.lat}, ${entry.coordinates.lng}], 15); return false;">${entry.food} - ${entry.location}</a></li>`;
       });
       html += '</ul>';
       foodListContainer.innerHTML = html;
-    }
-    
-    function focusPopupMap(lat, lng) {
-      if (popupMap) {
-        popupMap.setView([lat, lng], 15);
-      }
     }
   </script>
 </body>
