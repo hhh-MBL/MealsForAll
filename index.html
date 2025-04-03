@@ -177,9 +177,8 @@
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
     const sb = supabase.createClient(supabaseUrl, supabaseKey);
     
-    // רק מאפשר הוספה אם המשתמש מחובר
+    // Variables and element references
     let currentUserId = null;
-    
     let map, markers = {}, selectedCoordinates = null, foodLocations = [], selectedImage = null;
     const els = {
       location: document.getElementById('location'),
@@ -199,7 +198,7 @@
     
     const formatTime = ms => `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
     
-    // מעדכנים את האייקון של המיקום עם עיצוב חדש
+    // Function to create marker icon
     const createMarkerIcon = isTemp => L.divIcon({
       className: `custom-marker${isTemp ? ' marker-temp' : ''}`,
       html: `<i class="fas fa-${isTemp ? 'crosshairs' : 'map-pin'}"></i>`,
@@ -221,6 +220,7 @@
       selectedImage = null;
     }
     
+    // Image upload handling
     els.foodImage.addEventListener('change', function () {
       if (this.files && this.files[0]) {
         selectedImage = this.files[0];
@@ -236,7 +236,7 @@
     
     els.removeImage.addEventListener('click', removeImagePreview);
     
-    // בעת לחיצה על כפתור הפרסום, אם המשתמש לא מחובר – נשלח אותו לעמוד ההתחברות
+    // On submit, if not logged in, redirect to login page
     els.submitBtn.addEventListener('click', () => {
       if (!currentUserId) {
         window.location.href = "login.html";
@@ -252,15 +252,231 @@
       els.cancelBtn.style.display = 'none';
     });
     
+    // Function to fetch food locations from Supabase
+    async function fetchFoodLocations() {
+      try {
+        const now = Date.now();
+        const { data, error } = await sb.from('food_locations').select('*').gt('expiresAt', now);
+        if (error) throw error;
+        foodLocations = data || [];
+        updateMapMarkers();
+        updateFoodList();
+      } catch (e) {
+        console.error("Error fetching food locations:", e);
+      }
+    }
+    
+    // Function to handle reverse geocoding
+    async function reverseGeocode(lat, lng) {
+      els.loadingSpinner.style.display = 'inline-block';
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+        const data = await res.json();
+        els.location.value = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        els.loadingSpinner.style.display = 'none';
+      } catch (err) {
+        els.location.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        els.loadingSpinner.style.display = 'none';
+      }
+    }
+    
+    // Function to upload image to Supabase Storage
+    async function uploadImage(file, id) {
+      if (!file) return null;
+      if (!file.type.startsWith("image/")) {
+        alert("The file provided is not an image.");
+        return null;
+      }
+      try {
+        const fileExtension = file.name.split('.').pop();
+        const uniqueFileName = `${id}_${Date.now()}_${Math.random().toString(36).substr(2,5)}.${fileExtension}`;
+        const { data, error } = await sb.storage.from('food_images').upload(uniqueFileName, file, { cacheControl: '3600', upsert: false });
+        if (error) {
+          console.error("Error uploading image:", error);
+          alert("Error uploading image.");
+          return null;
+        }
+        const { data: publicData, error: publicError } = sb.storage.from('food_images').getPublicUrl(uniqueFileName);
+        if (publicError) {
+          console.error("Error getting image URL:", publicError);
+          alert("Error getting image URL.");
+          return null;
+        }
+        return publicData.publicUrl;
+      } catch (e) {
+        console.error("Exception during image upload:", e);
+        alert("Error uploading image.");
+        return null;
+      }
+    }
+    
+    // Function to add a new food entry
+    async function addNewFoodEntry() {
+      const loc = els.location.value.trim();
+      const food = els.food.value.trim();
+      const phone = els.phone.value.trim();
+      const amount = els.amount.value.trim();
+      if (!loc || !food || !phone || !amount) {
+        alert('Please fill in all fields!');
+        return;
+      }
+      if (!selectedCoordinates) {
+        alert('Please select a location on the map or type the full address.');
+        return;
+      }
+      const now = Date.now();
+      try {
+        let imageUrl = null;
+        if (selectedImage) imageUrl = await uploadImage(selectedImage, now.toString());
+        // Prepare the entry object
+        const entry = {
+          location: loc,
+          food,
+          phone,
+          amount: parseInt(amount),
+          coordinates: { lat: selectedCoordinates[0], lng: selectedCoordinates[1] },
+          timestamp: now,
+          expiresAt: now + (24 * 60 * 60 * 1000),
+          imageUrl,
+          createdBy: currentUserId
+        };
+        console.log("Inserting entry:", entry);
+        const { error } = await sb.from('food_locations').insert([entry]);
+        if (error) { 
+          console.error("Insert error:", error);
+          throw error; 
+        }
+        // Clear fields on success
+        els.location.value = '';
+        els.food.value = '';
+        els.phone.value = '';
+        els.amount.value = '1';
+        removeImagePreview();
+        selectedCoordinates = null;
+        clearTemporaryMarkers();
+        els.cancelBtn.style.display = 'none';
+      } catch (e) {
+        console.error("Error adding food location:", e);
+        alert("Error adding food location. Please try again. Check the console for more details.");
+      }
+    }
+    
+    // Function to delete a food location
+    async function deleteFoodLocation(id) {
+      try {
+        const { error } = await sb.from('food_locations').delete().eq('id', id);
+        if (error) throw error;
+      } catch (e) {
+        console.error("Error deleting food location:", e);
+        alert("Error deleting food location. Please try again.");
+      }
+    }
+    
+    // Function to update map markers based on foodLocations array
+    function updateMapMarkers() {
+      Object.values(markers).forEach(marker => { 
+        if (!marker.isTemporary) {
+          map.removeLayer(marker);
+        }
+      });
+      markers = markers.temp ? { temp: markers.temp } : {};
+      foodLocations.forEach(addMarkerForLocation);
+    }
+    
+    // Function to add a marker for a food entry
+    function addMarkerForLocation(entry) {
+      const marker = L.marker([entry.coordinates.lat, entry.coordinates.lng], { icon: createMarkerIcon() }).addTo(map);
+      markers[entry.id] = marker;
+      const timeRemaining = formatTime(entry.expiresAt - Date.now());
+      const deleteButtonHtml = (entry.createdBy === currentUserId)
+        ? `<button class="delete-btn"><i class="fas fa-trash"></i> Delete</button>`
+        : '';
+      const imageHtml = entry.imageUrl ? `<img src="${entry.imageUrl}" class="popup-image" alt="Food Image">` : '';
+      const popupEl = document.createElement('div');
+      popupEl.className = 'popup-content';
+      popupEl.innerHTML = `<div class="popup-header">
+          <span class="close-popup">&times;</span>
+          <h4>${entry.food}</h4>
+        </div>
+        <div class="popup-body">
+          <p>${entry.location}</p>
+          <p>Quantity: ${entry.amount}</p>
+          <p style="font-size:0.8rem;color:#6c757d;">Expires in: ${timeRemaining}</p>
+          ${imageHtml}
+          <div class="rating">
+            <span class="star" data-value="1">&#9733;</span>
+            <span class="star" data-value="2">&#9733;</span>
+            <span class="star" data-value="3">&#9733;</span>
+            <span class="star" data-value="4">&#9733;</span>
+            <span class="star" data-value="5">&#9733;</span>
+          </div>
+        </div>
+        <div class="popup-footer">${deleteButtonHtml}</div>`;
+      marker.bindPopup(popupEl);
+      popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
+      if (deleteButtonHtml) {
+        popupEl.querySelector('.delete-btn').addEventListener('click', () => {
+          if (confirm('Are you sure you want to delete this food location?')) {
+            deleteFoodLocation(entry.id);
+            marker.closePopup();
+          }
+        });
+      }
+      
+      // Add click events for star rating
+      const stars = popupEl.querySelectorAll('.star');
+      stars.forEach(star => {
+        star.addEventListener('click', function() {
+          const rating = parseInt(this.getAttribute('data-value'));
+          stars.forEach(s => {
+            s.classList.toggle('selected', parseInt(s.getAttribute('data-value')) <= rating);
+          });
+          console.log(`Rated ${rating} stars for entry ${entry.id}`);
+        });
+      });
+    }
+    
+    // Function to update the food list
+    function updateFoodList() {
+      els.foodList.innerHTML = '';
+      els.entriesCount.textContent = foodLocations.length;
+      els.emptyState.style.display = foodLocations.length === 0 ? 'block' : 'none';
+      foodLocations.sort((a, b) => b.timestamp - a.timestamp).forEach(entry => {
+        const timeRemaining = formatTime(entry.expiresAt - Date.now());
+        const imageElement = entry.imageUrl ? `<img src="${entry.imageUrl}" class="food-image-thumbnail" alt="Food Thumbnail">` : '';
+        const listItem = document.createElement('li');
+        listItem.className = 'food-item';
+        listItem.dataset.id = entry.id;
+        listItem.innerHTML = `<div>
+            <div class="food-name">${entry.food}</div>
+            <div class="food-location">${entry.location}</div>
+            <div class="expiry-info">Expires in: ${timeRemaining}</div>
+          </div>
+          <div style="display:flex;align-items:center;">
+            <span class="food-amount">${entry.amount}</span>
+            ${imageElement}
+          </div>`;
+        listItem.addEventListener('click', () => {
+          const marker = markers[entry.id];
+          if (marker) {
+            map.setView([entry.coordinates.lat, entry.coordinates.lng], 15);
+            marker.openPopup();
+          }
+        });
+        els.foodList.appendChild(listItem);
+      });
+    }
+    
+    // window.onload to initialize the app
     window.onload = async () => {
-      // בדיקת סשן התחברות
+      // Check authentication session
       const { data: { session } } = await sb.auth.getSession();
       if (session && session.user) {
         currentUserId = session.user.id;
         els.submitBtn.disabled = false;
       } else {
         currentUserId = null;
-        els.submitBtn.disabled = false; // מאפשרים לחיצה שמובילה לעמוד התחברות
+        els.submitBtn.disabled = false; // Allow clicking to redirect to login
         els.submitBtn.textContent = "Log in to publish";
       }
       
@@ -327,196 +543,6 @@
         foodLocations.filter(entry => entry.expiresAt < now).forEach(entry => deleteFoodLocation(entry.id));
       }, 60000);
     };
-    
-    async function reverseGeocode(lat, lng) {
-      els.loadingSpinner.style.display = 'inline-block';
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
-        const data = await res.json();
-        els.location.value = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        els.loadingSpinner.style.display = 'none';
-      } catch (err) {
-        els.location.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        els.loadingSpinner.style.display = 'none';
-      }
-    }
-    
-    async function uploadImage(file, id) {
-      if (!file) return null;
-      if (!file.type.startsWith("image/")) {
-        alert("The file provided is not an image.");
-        return null;
-      }
-      try {
-        const fileExtension = file.name.split('.').pop();
-        const uniqueFileName = `${id}_${Date.now()}_${Math.random().toString(36).substr(2,5)}.${fileExtension}`;
-        const { data, error } = await sb.storage.from('food_images').upload(uniqueFileName, file, { cacheControl: '3600', upsert: false });
-        if (error) {
-          console.error("Error uploading image:", error);
-          alert("Error uploading image.");
-          return null;
-        }
-        const { data: publicData, error: publicError } = sb.storage.from('food_images').getPublicUrl(uniqueFileName);
-        if (publicError) {
-          console.error("Error getting image URL:", publicError);
-          alert("Error getting image URL.");
-          return null;
-        }
-        return publicData.publicUrl;
-      } catch (e) {
-        console.error("Exception during image upload:", e);
-        alert("Error uploading image.");
-        return null;
-      }
-    }
-    
-    async function addNewFoodEntry() {
-      const loc = els.location.value.trim();
-      const food = els.food.value.trim();
-      const phone = els.phone.value.trim();
-      const amount = els.amount.value.trim();
-      if (!loc || !food || !phone || !amount) {
-        alert('Please fill in all fields!');
-        return;
-      }
-      if (!selectedCoordinates) {
-        alert('Please select a location on the map or type the full address.');
-        return;
-      }
-      const now = Date.now();
-      try {
-        let imageUrl = null;
-        if (selectedImage) imageUrl = await uploadImage(selectedImage, now.toString());
-        // Prepare the entry object
-        const entry = {
-          location: loc,
-          food,
-          phone,
-          amount: parseInt(amount),
-          coordinates: { lat: selectedCoordinates[0], lng: selectedCoordinates[1] },
-          timestamp: now,
-          expiresAt: now + (24 * 60 * 60 * 1000),
-          imageUrl,
-          createdBy: currentUserId
-        };
-        console.log("Inserting entry:", entry);
-        const { error } = await sb.from('food_locations').insert([entry]);
-        if (error) { 
-          console.error("Insert error:", error);
-          throw error; 
-        }
-        // Clear fields on success
-        els.location.value = '';
-        els.food.value = '';
-        els.phone.value = '';
-        els.amount.value = '1';
-        removeImagePreview();
-        selectedCoordinates = null;
-        clearTemporaryMarkers();
-        els.cancelBtn.style.display = 'none';
-      } catch (e) {
-        console.error("Error adding food location:", e);
-        alert("Error adding food location. Please try again. Check the console for more details.");
-      }
-    }
-    
-    async function deleteFoodLocation(id) {
-      try {
-        const { error } = await sb.from('food_locations').delete().eq('id', id);
-        if (error) throw error;
-      } catch (e) {
-        console.error("Error deleting food location:", e);
-        alert("Error deleting food location. Please try again.");
-      }
-    }
-    
-    function updateMapMarkers() {
-      Object.values(markers).forEach(marker => { if (!marker.isTemporary) map.removeLayer(marker); });
-      markers = markers.temp ? { temp: markers.temp } : {};
-      foodLocations.forEach(addMarkerForLocation);
-    }
-    
-    function addMarkerForLocation(entry) {
-      const marker = L.marker([entry.coordinates.lat, entry.coordinates.lng], { icon: createMarkerIcon() }).addTo(map);
-      markers[entry.id] = marker;
-      const timeRemaining = formatTime(entry.expiresAt - Date.now());
-      const deleteButtonHtml = (entry.createdBy === currentUserId)
-        ? `<button class="delete-btn"><i class="fas fa-trash"></i> Delete</button>`
-        : '';
-      const imageHtml = entry.imageUrl ? `<img src="${entry.imageUrl}" class="popup-image" alt="Food Image">` : '';
-      const popupEl = document.createElement('div');
-      popupEl.className = 'popup-content';
-      popupEl.innerHTML = `<div class="popup-header">
-          <span class="close-popup">&times;</span>
-          <h4>${entry.food}</h4>
-        </div>
-        <div class="popup-body">
-          <p>${entry.location}</p>
-          <p>Quantity: ${entry.amount}</p>
-          <p style="font-size:0.8rem;color:#6c757d;">Expires in: ${timeRemaining}</p>
-          ${imageHtml}
-          <div class="rating">
-            <span class="star" data-value="1">&#9733;</span>
-            <span class="star" data-value="2">&#9733;</span>
-            <span class="star" data-value="3">&#9733;</span>
-            <span class="star" data-value="4">&#9733;</span>
-            <span class="star" data-value="5">&#9733;</span>
-          </div>
-        </div>
-        <div class="popup-footer">${deleteButtonHtml}</div>`;
-      marker.bindPopup(popupEl);
-      popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
-      if (deleteButtonHtml) {
-        popupEl.querySelector('.delete-btn').addEventListener('click', () => {
-          if (confirm('Are you sure you want to delete this food location?')) {
-            deleteFoodLocation(entry.id);
-            marker.closePopup();
-          }
-        });
-      }
-      
-      // הוספת אירועי דירוג עם כוכבים
-      const stars = popupEl.querySelectorAll('.star');
-      stars.forEach(star => {
-        star.addEventListener('click', function() {
-          const rating = parseInt(this.getAttribute('data-value'));
-          stars.forEach(s => {
-            s.classList.toggle('selected', parseInt(s.getAttribute('data-value')) <= rating);
-          });
-          console.log(`Rated ${rating} stars for entry ${entry.id}`);
-        });
-      });
-    }
-    
-    function updateFoodList() {
-      els.foodList.innerHTML = '';
-      els.entriesCount.textContent = foodLocations.length;
-      els.emptyState.style.display = foodLocations.length === 0 ? 'block' : 'none';
-      foodLocations.sort((a, b) => b.timestamp - a.timestamp).forEach(entry => {
-        const timeRemaining = formatTime(entry.expiresAt - Date.now());
-        const imageElement = entry.imageUrl ? `<img src="${entry.imageUrl}" class="food-image-thumbnail" alt="Food Thumbnail">` : '';
-        const listItem = document.createElement('li');
-        listItem.className = 'food-item';
-        listItem.dataset.id = entry.id;
-        listItem.innerHTML = `<div>
-            <div class="food-name">${entry.food}</div>
-            <div class="food-location">${entry.location}</div>
-            <div class="expiry-info">Expires in: ${timeRemaining}</div>
-          </div>
-          <div style="display:flex;align-items:center;">
-            <span class="food-amount">${entry.amount}</span>
-            ${imageElement}
-          </div>`;
-        listItem.addEventListener('click', () => {
-          const marker = markers[entry.id];
-          if (marker) {
-            map.setView([entry.coordinates.lat, entry.coordinates.lng], 15);
-            marker.openPopup();
-          }
-        });
-        els.foodList.appendChild(listItem);
-      });
-    }
   </script>
 </body>
 </html>
