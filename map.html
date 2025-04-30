@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MealsForAll Live Map</title>
+  <title>MealsForAll Map</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
   <style>
@@ -15,104 +15,86 @@
       border-radius:50%; width:48px; height:48px;
       box-shadow:0 2px 5px rgba(0,0,0,0.3);
     }
-    .empty-state {
-      position:absolute; top:50%; left:50%;
-      transform:translate(-50%, -50%);
-      background:rgba(255,255,255,0.8);
-      padding:1rem 2rem; border-radius:.5rem;
-      font-size:1.2rem; text-align:center;
-    }
   </style>
 </head>
 <body>
   <div id="map"></div>
 
+  <!-- Leaflet & Supabase Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // your Supabase creds
-    const URL = 'https://dieltjdqgeppyixximwe.supabase.co';
-    const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
-    const supabase = supabase.createClient(URL, KEY);
+    // Wait for the Supabase global to be available
+    window.addEventListener('load', async () => {
+      // Grab the createClient function from the Supabase global
+      const { createClient } = window.supabase;    // <-- note capital "S"
 
-    let map, markers = {};
+      // Initialize your client (be sure to paste your full key)
+      const SUPA_URL = 'https://dieltjdqgeppyixximwe.supabase.co';
+      const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
+      const sb = createClient(SUPA_URL, SUPA_KEY);
 
-    // create icon
-    const createIcon = () => L.divIcon({
-      className:'custom-marker',
-      html:`<i class="fas fa-utensils"></i>`,
-      iconSize:[48,48], iconAnchor:[24,24]
-    });
-
-    function formatRemaining(expiresAt) {
-      const ms = expiresAt - Date.now();
-      const h = Math.floor(ms/(1000*60*60));
-      const m = Math.floor((ms%(1000*60*60))/(1000*60));
-      return `${h}h ${m}m`;
-    }
-
-    function addMarker(entry) {
-      if (entry.expiresAt <= Date.now()) return;
-      const id = entry.id;
-      // if exists, remove old
-      if (markers[id]) map.removeLayer(markers[id]);
-
-      const m = L.marker([entry.coordinates.lat, entry.coordinates.lng], { icon:createIcon() })
-        .addTo(map)
-        .bindPopup(`
-          <div>
-            <h4>${entry.food}</h4>
-            <p>${entry.location}</p>
-            <p>Qty: ${entry.amount}</p>
-            <p>Expires in: ${formatRemaining(entry.expiresAt)}</p>
-          </div>
-        `);
-
-      markers[id] = m;
-    }
-
-    function removeMarker(id) {
-      if (markers[id]) {
-        map.removeLayer(markers[id]);
-        delete markers[id];
-      }
-    }
-
-    // initial load
-    async function init() {
-      map = L.map('map',{ center:[31.7683,35.2137], zoom:8 });
+      // Set up the map
+      const map = L.map('map', { center:[31.7683,35.2137], zoom:8 });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-      const { data, error } = await supabase
-        .from('food_locations')
-        .select('*')
-        .gt('expiresAt', Date.now());
+      // Helper to make marker icons
+      const createMarkerIcon = () => L.divIcon({
+        className: 'custom-marker',
+        html: `<i class="fas fa-utensils"></i>`,
+        iconSize: [48,48],
+        iconAnchor: [24,24]
+      });
 
-      if (error) { console.error(error); return; }
-      if (data.length===0) {
-        document.body.innerHTML += `<div class="empty-state">אין נקודות מזון זמינות כרגע.</div>`;
-      } else {
+      // Add one marker
+      function addMarker(entry) {
+        L.marker([entry.coordinates.lat, entry.coordinates.lng], { icon: createMarkerIcon() })
+          .addTo(map)
+          .bindPopup(`
+            <div>
+              <h4>${entry.food}</h4>
+              <p>${entry.location}</p>
+              <p>Quantity: ${entry.amount}</p>
+            </div>
+          `);
+      }
+
+      // Fetch and render all non-expired locations
+      async function fetchLocations() {
+        const now = Date.now();
+        const { data, error } = await sb
+          .from('food_locations')
+          .select('*')
+          .gt('expiresAt', now);
+
+        if (error) {
+          console.error("Error fetching locations:", error);
+          return;
+        }
         data.forEach(addMarker);
       }
 
-      // subscribe to Realtime
-      supabase
-        .channel('public:food_locations')
-        .on('postgres_changes', { event:'INSERT', schema:'public', table:'food_locations' }, (msg) => {
-          addMarker(msg.new);
+      // Do it once on load
+      await fetchLocations();
+
+      // Live‐sync on INSERT / DELETE / UPDATE
+      sb.channel('public:food_locations')
+        .on('postgres_changes', { event:'INSERT', schema:'public', table:'food_locations' }, payload => {
+          if (payload.new.expiresAt > Date.now()) {
+            addMarker(payload.new);
+          }
         })
-        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'food_locations' }, (msg) => {
-          // if expired, remove; else update
-          if (msg.new.expiresAt <= Date.now()) removeMarker(msg.new.id);
-          else addMarker(msg.new);
+        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'food_locations' }, async payload => {
+          // Simplest: just refresh all
+          map.eachLayer(layer => layer instanceof L.Marker && map.removeLayer(layer));
+          await fetchLocations();
         })
-        .on('postgres_changes', { event:'DELETE', schema:'public', table:'food_locations' }, (msg) => {
-          removeMarker(msg.old.id);
+        .on('postgres_changes', { event:'DELETE', schema:'public', table:'food_locations' }, async payload => {
+          map.eachLayer(layer => layer instanceof L.Marker && map.removeLayer(layer));
+          await fetchLocations();
         })
         .subscribe();
-    }
-
-    window.onload = init;
+    });
   </script>
 </body>
 </html>
