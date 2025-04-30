@@ -9,328 +9,137 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* בסיס – עיצובים כלליים */
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
     body { background:#f8f9fa; }
     .app-container { max-width:1200px; margin:auto; padding:1rem; }
-    .app-title { font-size:2rem; color:#4361ee; margin-bottom:1rem; text-align: center; }
-   
-    /* תצוגת הלייאאוט הראשי */
-    .main-layout { display: grid; gap:1rem; height:calc(100vh - 100px); }
-    /* ב-PC – סרגל צדדי ומפה */
-    @media (min-width:768px) {
-      .main-layout { grid-template-columns: 280px 1fr; }
-      .main-layout.collapse-sidebar { grid-template-columns: 1fr; }
-    }
-    /* במכשירים ניידים – כברירת מחדל מוצג הסרגל בלבד */
+    .app-title { font-size:2rem; color:#4361ee; margin-bottom:1rem; text-align:center; }
+    .main-layout { display:grid; gap:1rem; height:calc(100vh - 100px); }
+    @media (min-width:768px) { .main-layout { grid-template-columns:280px 1fr; } }
     @media (max-width:767px) {
-      .main-layout { display: block; }
-      .sidebar { display: block; }
-      #map-container { display: none; }
-      .main-layout.map-view #map-container { display: block; }
-      .main-layout.map-view .sidebar { display: none; }
+      .main-layout { display:block; }
+      .sidebar { display:block; }
+      #map-container { display:none; }
+      .main-layout.map-view #map-container { display:block; }
+      .main-layout.map-view .sidebar { display:none; }
     }
-   
     .sidebar, #map-container, #map { border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.05); }
     .sidebar { background:#fff; padding:1rem; display:flex; flex-direction:column; }
     #map-container, #map { height:100%; overflow:hidden; }
-   
     .form-group { margin-bottom:1rem; }
-    label { display:block; margin-bottom:0.3rem; font-weight:500; }
+    label { display:block; margin-bottom:.3rem; font-weight:500; }
     .input-with-icon { position:relative; }
-    .input-with-icon i { position:absolute; left:0.7rem; top:50%; transform:translateY(-50%); color:#adb5bd; }
-    input { width:100%; padding:0.7rem 1rem 0.7rem 2rem; border:1px solid #dee2e6; border-radius:8px; }
+    .input-with-icon i { position:absolute; left:.7rem; top:50%; transform:translateY(-50%); color:#adb5bd; }
+    input { width:100%; padding:.7rem 1rem .7rem 2rem; border:1px solid #dee2e6; border-radius:8px; }
     input:focus { outline:none; border-color:#4361ee; }
-   
-    .btn { padding:0.7rem; border:none; border-radius:8px; font-weight:500; cursor:pointer; }
+    .btn { padding:.7rem; border:none; border-radius:8px; font-weight:500; cursor:pointer; }
     .btn-primary { background:#4361ee; color:#fff; width:100%; }
     .btn-danger { background:#ef233c; color:#fff; }
-    .button-group { display:flex; gap:0.5rem; }
+    .button-group { display:flex; gap:.5rem; }
     #cancel-btn { display:none; }
-   
     .food-entries { margin-top:auto; max-height:250px; overflow-y:auto; }
-    .entries-title { display:flex; justify-content:space-between; margin-bottom:0.5rem; }
-    .entries-counter { background:#4361ee; color:#fff; border-radius:10px; font-size:0.75rem; padding:2px 6px; }
+    .entries-title { display:flex; justify-content:space-between; margin-bottom:.5rem; }
+    .entries-counter { background:#4361ee; color:#fff; border-radius:10px; font-size:.75rem; padding:2px 6px; }
     .food-list { list-style:none; }
-    .food-item { padding:0.5rem; border-radius:6px; margin-bottom:0.3rem; background:#f8f9fa; display:flex; justify-content:space-between; cursor:pointer; }
+    .food-item { padding:.5rem; border-radius:6px; margin-bottom:.3rem; background:#f8f9fa; display:flex; justify-content:space-between; cursor:pointer; }
     .food-name { font-weight:600; }
-    .food-location { font-size:0.85rem; color:#6c757d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .food-amount { background:#4361ee; color:#fff; border-radius:12px; font-size:0.8rem; padding:2px 6px; margin-left:0.5rem; }
-   
+    .food-location { font-size:.85rem; color:#6c757d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .food-amount { background:#4361ee; color:#fff; border-radius:12px; font-size:.8rem; padding:2px 6px; margin-left:.5rem; }
     .loading-spinner { display:none; width:16px; height:16px; border:2px solid rgba(0,0,0,0.1); border-left-color:#4361ee; border-radius:50%; animation:spin 1s linear infinite; margin-left:8px; }
     @keyframes spin { to { transform:rotate(360deg); } }
-   
-    /* סמל המיקום – משתמש באייקונים המקוריים */
-    .custom-marker {
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      font-size:28px;
-      color:#fff;
-      background:#4361ee;
-      border-radius:50%;
-      width:48px;
-      height:48px;
-      box-shadow:0 2px 5px rgba(0,0,0,0.3);
-    }
-    .marker-temp { background:#ef233c; }
-   
-    /* חלונית המידע (פופ-אפ) – עיצוב לעברית */
-    .popup-content {
-      padding:8px;
-      position:relative;
-      max-width:250px;
-      direction: rtl;
-      text-align: right;
-    }
+    .custom-marker { display:flex; justify-content:center; align-items:center; font-size:28px; color:#fff; background:#4361ee; border-radius:50%; width:48px; height:48px; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
+    .popup-content { padding:8px; direction:rtl; text-align:right; max-width:250px; }
     .popup-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
     .popup-header h4 { margin:0; font-size:1rem; }
     .popup-body p { margin:4px 0; }
     .popup-footer { text-align:right; margin-top:8px; }
     .close-popup { font-size:1.2rem; cursor:pointer; }
-    .delete-btn { background:#ef233c; color:#fff; border:none; border-radius:4px; padding:4px 8px; font-size:0.8rem; cursor:pointer; }
-   
+    .delete-btn { background:#ef233c; color:#fff; border:none; border-radius:4px; padding:4px 8px; font-size:.8rem; cursor:pointer; }
     .image-upload { display:flex; align-items:center; margin-bottom:1rem; }
-    .image-container { position:relative; display:inline-block; }
     .image-preview { width:60px; height:60px; border-radius:8px; object-fit:cover; display:none; }
     .remove-image { position:absolute; top:0; right:0; background:rgba(0,0,0,0.6); color:#fff; padding:2px 6px; font-size:1rem; cursor:pointer; display:none; }
-    .upload-btn { position:relative; overflow:hidden; background:#f8f9fa; color:#495057; padding:0.5rem; border:none; border-radius:8px; cursor:pointer; }
+    .upload-btn { position:relative; overflow:hidden; background:#f8f9fa; color:#495057; padding:.5rem; border:none; border-radius:8px; cursor:pointer; }
     .upload-btn input[type=file] { position:absolute; left:0; top:0; opacity:0; width:100%; height:100%; cursor:pointer; }
-    .upload-btn .fa-camera { font-size:1.5rem; margin-right:0.3rem; }
     .food-image-thumbnail { width:50px; height:50px; border-radius:4px; margin-left:8px; object-fit:cover; }
     .popup-image { width:100%; max-height:150px; object-fit:cover; border-radius:6px; margin-top:8px; }
-   
-    /* קישורי התחברות והרשמה */
-    a:active, a:focus { color: inherit; text-decoration: none; }
-   
-    /* דירוג עם כוכבים */
-    .rating {
-      display: flex;
-      justify-content: center;
-      margin-top: 8px;
-    }
-    .rating .star {
-      font-size: 1.5rem;
-      color: #ccc;
-      cursor: pointer;
-      margin: 0 2px;
-    }
-    .rating .star.selected {
-      color: #FFD700;
-    }
-   
-    /* כפתור ניווט – תמיד נראה, בגודל מותאם */
-    #toggle-map-btn {
-      position: fixed;
-      right: 10px;
-      bottom: 10px;
-      background: #4361ee;
-      color: #fff;
-      border: none;
-      border-radius: 50%;
-      z-index: 1000;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-    }
-    /* במכשירים ניידים */
-    @media (max-width:767px) {
-      #toggle-map-btn { width: 50px; height: 50px; }
-    }
-    /* במכשירי שולחן עבודה – קצת קטן יותר */
-    @media (min-width:768px) {
-      #toggle-map-btn { width: 40px; height: 40px; }
-    }
-    
-    /* --- Hamburger Popup Styles (Added) --- */
-    .hamburger-btn {
-      position: fixed;
-      top: 12px;
-      right: 8px;
-      z-index: 1100;
-      background: transparent;
-      border: none;
-      font-size: 32px;
-      cursor: pointer;
-      color: #4361ee;
-    }
-    .hamburger-popup {
-      position: fixed;
-      top: 0;
-      right: -320px;
-      width: 320px;
-      height: 100%;
-      background: #ffffff;
-      border-radius: 8px 0 0 8px;
-      box-shadow: -4px 0 15px rgba(0,0,0,0.2);
-      transition: right 0.3s ease;
-      z-index: 1050;
-      padding: 1.5rem;
-      overflow-y: auto;
-    }
-    .hamburger-popup.open {
-      right: 0;
-    }
-    .popup-close-btn {
-      background: transparent;
-      border: none;
-      font-size: 28px;
-      cursor: pointer;
-      color: #4361ee;
-      position: absolute;
-      top: 10px;
-      left: 10px;
-    }
-    .popup-nav {
-      margin-top: 50px;
-      display: flex;
-      justify-content: space-around;
-      border-bottom: 2px solid #eee;
-      padding-bottom: 0.5rem;
-      margin-bottom: 1rem;
-    }
-    .nav-btn {
-      background: none;
-      border: none;
-      font-size: 1.1rem;
-      color: #333;
-      cursor: pointer;
-      padding: 0.5rem 1rem;
-    }
-    .nav-btn.active {
-      color: #4361ee;
-      border-bottom: 2px solid #4361ee;
-    }
-    .popup-page {
-      display: none;
-    }
-    .popup-page.active {
-      display: block;
-    }
-    .auth-links-popup {
-      text-align: center;
-      margin-top: 1rem;
-      border-top: 1px solid #eee;
-      padding-top: 1rem;
-    }
-    .auth-links-popup a {
-      margin: 0 0.5rem;
-      font-size: 1rem;
-      text-decoration: underline;
-      color: #4361ee;
-      cursor: pointer;
-    }
+    #toggle-map-btn { position:fixed; right:10px; bottom:10px; background:#4361ee; color:#fff; border:none; border-radius:50%; z-index:1000; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
+    @media (max-width:767px) { #toggle-map-btn { width:50px; height:50px; } }
+    @media (min-width:768px) { #toggle-map-btn { width:40px; height:40px; } }
+    .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:1rem; }
   </style>
 </head>
 <body>
-  <!-- Hamburger Popup (Added without changing anything else) -->
-  <button id="hamburger-btn" class="hamburger-btn"><i class="fas fa-bars"></i></button>
-  <div id="hamburger-popup" class="hamburger-popup">
-    <button id="popup-close-btn" class="popup-close-btn"><i class="fas fa-times"></i></button>
-    <div class="popup-nav">
-      <button id="nav-map" class="nav-btn active">Map</button>
-      <button id="nav-about" class="nav-btn">About</button>
-    </div>
-    <div id="popup-page-map" class="popup-page active">
-      <a href="map.html" class="btn btn-primary" style="margin-bottom:1rem;">Open Full Map</a>
-    </div>
-    <div id="popup-page-about" class="popup-page">
-      <a href="about.html" class="btn btn-primary" style="margin-bottom:1rem;">About</a>
-    </div>
-    <div class="auth-links-popup">
-      <a href="login.html">Login</a> | <a href="register.html">Signup</a>
-    </div>
-  </div>
-  
   <div class="app-container">
-    <!-- הלוגו נשאר באנגלית -->
     <h1 class="app-title">MealsForAll</h1>
-    <div style="margin-bottom: 1rem; text-align: center;">
+    <div style="text-align:center; margin-bottom:1rem;">
       <a href="login.html">login</a> | <a href="register.html">register</a>
     </div>
     <div class="main-layout">
       <div class="sidebar">
-        <div>
-          <h2 style="margin-bottom:1rem; font-size:1.2rem;">הוסף מיקום מזון</h2>
-          <div class="form-group">
-            <label for="location">מיקום</label>
-            <!-- הזן כתובת מלאה -->
-            <div class="input-with-icon" style="position:relative;">
-              <i class="fas fa-map-marker-alt"></i>
-              <input type="text" id="location" placeholder="הזן כתובת מלאה" />
-              <div id="loading-spinner" class="loading-spinner"></div>
-            </div>
+        <h2 style="margin-bottom:1rem; font-size:1.2rem;">הוסף מיקום מזון</h2>
+        <div class="form-group">
+          <label for="location">מיקום</label>
+          <div class="input-with-icon">
+            <i class="fas fa-map-marker-alt"></i>
+            <input type="text" id="location" placeholder="הזן כתובת מלאה" />
+            <div id="loading-spinner" class="loading-spinner"></div>
           </div>
-          <div class="form-group">
-            <label for="food">סוג מזון</label>
-            <div class="input-with-icon">
-              <i class="fas fa-utensils"></i>
-              <input type="text" id="food" placeholder="איזה מזון זמין כאן?" />
-            </div>
+        </div>
+        <div class="form-group">
+          <label for="food">סוג מזון</label>
+          <div class="input-with-icon">
+            <i class="fas fa-utensils"></i>
+            <input type="text" id="food" placeholder="איזה מזון זמין כאן?" />
           </div>
-          <!-- שדה טלפון -->
-          <div class="form-group">
-            <label for="phone">טלפון</label>
-            <div class="input-with-icon">
-              <i class="fas fa-phone"></i>
-              <input type="text" id="phone" placeholder="הזן מספר טלפון" />
-            </div>
+        </div>
+        <div class="form-group">
+          <label for="phone">טלפון</label>
+          <div class="input-with-icon">
+            <i class="fas fa-phone"></i>
+            <input type="text" id="phone" placeholder="הזן מספר טלפון" />
           </div>
-          <div class="form-group">
-            <label for="amount">כמות</label>
-            <div class="input-with-icon">
-              <i class="fas fa-hashtag"></i>
-              <input type="number" id="amount" min="1" value="1" />
-            </div>
+        </div>
+        <div class="form-group">
+          <label for="amount">כמות</label>
+          <div class="input-with-icon">
+            <i class="fas fa-hashtag"></i>
+            <input type="number" id="amount" min="1" value="1" />
           </div>
-          <div class="form-group">
-            <label>הוסף תמונה (אופציונלי)</label>
-            <div class="image-upload">
-              <button class="upload-btn">
-                <i class="fas fa-camera"></i> העלה תמונה
-                <input type="file" id="food-image" accept="image/*" />
-              </button>
-              <div class="image-container">
-                <img id="image-preview" class="image-preview" alt="תצוגה מקדימה" />
-                <span id="remove-image" class="remove-image">&times;</span>
-              </div>
-            </div>
+        </div>
+        <div class="form-group image-upload">
+          <button class="upload-btn">
+            <i class="fas fa-camera"></i> העלה תמונה
+            <input type="file" id="food-image" accept="image/*" />
+          </button>
+          <div style="position:relative;">
+            <img id="image-preview" class="image-preview" alt="תצוגה מקדימה" />
+            <span id="remove-image" class="remove-image">&times;</span>
           </div>
-          <div class="form-group button-group">
-            <button id="submit-btn" class="btn btn-primary">
-              <i class="fas fa-plus"></i> הוסף מיקום מזון
-            </button>
-            <button id="cancel-btn" class="btn btn-danger">
-              <i class="fas fa-times"></i> ביטול
-            </button>
-          </div>
+        </div>
+        <div class="button-group">
+          <button id="submit-btn" class="btn btn-primary"><i class="fas fa-plus"></i> הוסף</button>
+          <button id="cancel-btn" class="btn btn-danger"><i class="fas fa-times"></i> ביטול</button>
         </div>
         <div class="food-entries">
           <div class="entries-title">
             <h2 style="font-size:1.1rem;">מיקומי מזון זמינים</h2>
             <span id="entries-count" class="entries-counter">0</span>
           </div>
-          <div id="empty-state" class="empty-state">
-            <i class="fas fa-map" style="display:block; margin-bottom:0.5rem;"></i>
-            <p>אין מיקומי מזון זמינים.</p>
-          </div>
+          <div id="empty-state" class="empty-state"><i class="fas fa-map" style="font-size:2rem;margin-bottom:.5rem;"></i><p>אין מיקומים זמינים</p></div>
           <ul id="food-list" class="food-list"></ul>
         </div>
       </div>
       <div id="map-container"><div id="map"></div></div>
     </div>
   </div>
- 
-  <!-- כפתור ניווט (חץ) – תמיד נראה -->
   <button id="toggle-map-btn"><i class="fas fa-arrow-right"></i></button>
- 
+
   <script>
-    // הגדרת Supabase
-    const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
-    const sb = supabase.createClient(supabaseUrl, supabaseKey);
-   
-    // משתנים והפניות לאלמנטים
+    const SUPA_URL = 'https://dieltjdqgeppyixximwe.supabase.co';
+    const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9…';
+    const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
     let currentUserId = null;
-    let map, markers = {}, selectedCoordinates = null, foodLocations = [], selectedImage = null;
+    let map, markers = {}, foodLocations = [];
     const els = {
       location: document.getElementById('location'),
       food: document.getElementById('food'),
@@ -347,407 +156,130 @@
       emptyState: document.getElementById('empty-state'),
       toggleBtn: document.getElementById('toggle-map-btn')
     };
-   
-    const formatTime = ms => `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
-   
-    // שימוש באייקונים המקוריים
-    const createMarkerIcon = isTemp => L.divIcon({
-      className: `custom-marker${isTemp ? ' marker-temp' : ''}`,
-      html: `<i class="fas fa-${isTemp ? 'crosshairs' : 'utensils'}"></i>`,
-      iconSize: [48, 48],
-      iconAnchor: [24, 24]
-    });
-   
-    const clearTemporaryMarkers = () => {
-      if (markers.temp) {
-        map.removeLayer(markers.temp);
-        delete markers.temp;
-      }
+
+    const formatTime = ms => {
+      const h = Math.floor(ms/3600000);
+      const m = Math.floor((ms%3600000)/60000);
+      return `${h}h ${m}m`;
     };
-   
-    function removeImagePreview() {
-      els.imagePreview.style.display = 'none';
-      els.imagePreview.src = '';
-      els.removeImage.style.display = 'none';
-      selectedImage = null;
-    }
-   
-    // טיפול בהעלאת תמונה
-    els.foodImage.addEventListener('change', function () {
-      if (this.files && this.files[0]) {
-        selectedImage = this.files[0];
-        let reader = new FileReader();
-        reader.onload = e => {
-          els.imagePreview.src = e.target.result;
-          els.imagePreview.style.display = 'block';
-          els.removeImage.style.display = 'block';
-        };
-        reader.readAsDataURL(selectedImage);
-      }
+
+    const createMarkerIcon = () => L.divIcon({
+      className:'custom-marker',
+      html:'<i class="fas fa-utensils"></i>',
+      iconSize:[48,48],
+      iconAnchor:[24,24]
     });
-   
-    els.removeImage.addEventListener('click', removeImagePreview);
-   
-    // לחיצה על כפתור הפרסום – במידה והמשתמש לא מחובר, מועבר לעמוד ההתחברות
-    els.submitBtn.addEventListener('click', () => {
-      if (!currentUserId) {
-        window.location.href = "login.html";
-        return;
-      }
-      addNewFoodEntry();
-    });
-   
-    els.cancelBtn.addEventListener('click', () => {
-      clearTemporaryMarkers();
-      selectedCoordinates = null;
-      els.location.value = '';
-      els.cancelBtn.style.display = 'none';
-    });
-   
-    // פונקציה להבאת מיקומי מזון מ-Supabase
-    async function fetchFoodLocations() {
-      try {
-        const now = Date.now();
-        const { data, error } = await sb.from('food_locations').select('*').gt('expiresAt', now);
-        if (error) throw error;
-        foodLocations = data || [];
-        updateMapMarkers();
-        updateFoodList();
-      } catch (e) {
-        console.error("Error fetching food locations:", e);
-      }
-    }
-   
-    // פונקציה לגיאוקודינג הפוך
-    async function reverseGeocode(lat, lng) {
-      els.loadingSpinner.style.display = 'inline-block';
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
-        const data = await res.json();
-        els.location.value = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        els.loadingSpinner.style.display = 'none';
-      } catch (err) {
-        els.location.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        els.loadingSpinner.style.display = 'none';
-      }
-    }
-   
-    // פונקציה להעלאת תמונה ל-Supabase Storage
-    async function uploadImage(file, id) {
-      if (!file) return null;
-      if (!file.type.startsWith("image/")) {
-        alert("The file provided is not an image.");
-        return null;
-      }
-      try {
-        const fileExtension = file.name.split('.').pop();
-        const uniqueFileName = `${id}_${Date.now()}_${Math.random().toString(36).substr(2,5)}.${fileExtension}`;
-        const { data, error } = await sb.storage.from('food_images').upload(uniqueFileName, file, { cacheControl: '3600', upsert: false });
-        if (error) {
-          console.error("Error uploading image:", error);
-          alert("Error uploading image.");
-          return null;
-        }
-        const { data: publicData, error: publicError } = sb.storage.from('food_images').getPublicUrl(uniqueFileName);
-        if (publicError) {
-          console.error("Error getting image URL:", publicError);
-          alert("Error getting image URL.");
-          return null;
-        }
-        return publicData.publicUrl;
-      } catch (e) {
-        console.error("Exception during image upload:", e);
-        alert("Error uploading image.");
-        return null;
-      }
-    }
-   
-    // הוספת מיקום מזון חדש
-    async function addNewFoodEntry() {
-      const loc = els.location.value.trim();
-      const food = els.food.value.trim();
-      const phone = els.phone.value.trim();
-      const amount = els.amount.value.trim();
-      if (!loc || !food || !phone || !amount) {
-        alert('Please fill in all fields!');
-        return;
-      }
-      if (!selectedCoordinates) {
-        alert('Please select a location on the map or type the full address.');
-        return;
-      }
-      const now = Date.now();
-      try {
-        let imageUrl = null;
-        if (selectedImage) imageUrl = await uploadImage(selectedImage, now.toString());
-        const entry = {
-          location: loc,
-          food,
-          phone,
-          amount: parseInt(amount),
-          coordinates: { lat: selectedCoordinates[0], lng: selectedCoordinates[1] },
-          timestamp: now,
-          expiresAt: now + (24 * 60 * 60 * 1000),
-          imageUrl,
-          createdBy: currentUserId
-        };
-        console.log("Inserting entry:", entry);
-        const { error } = await sb.from('food_locations').insert([entry]);
-        if (error) {
-          console.error("Insert error:", error);
-          throw error;
-        }
-        // איפוס שדות בהצלחה
-        els.location.value = '';
-        els.food.value = '';
-        els.phone.value = '';
-        els.amount.value = '1';
-        removeImagePreview();
-        selectedCoordinates = null;
-        clearTemporaryMarkers();
-        els.cancelBtn.style.display = 'none';
-      } catch (e) {
-        console.error("Error adding food location:", e);
-        alert("Error adding food location. Please try again. Check the console for more details.");
-      }
-    }
-   
-    // מחיקת מיקום מזון
-    async function deleteFoodLocation(id) {
-      try {
-        const { error } = await sb.from('food_locations').delete().eq('id', id);
-        if (error) throw error;
-      } catch (e) {
-        console.error("Error deleting food location:", e);
-        alert("Error deleting food location. Please try again.");
-      }
-    }
-   
-    // עדכון סמני המפה
-    function updateMapMarkers() {
-      Object.values(markers).forEach(marker => {
-        if (!marker.isTemporary) map.removeLayer(marker);
-      });
-      markers = markers.temp ? { temp: markers.temp } : {};
-      foodLocations.forEach(addMarkerForLocation);
-    }
-   
-    // הוספת סמן למיקום מזון
-    function addMarkerForLocation(entry) {
-      const marker = L.marker([entry.coordinates.lat, entry.coordinates.lng], { icon: createMarkerIcon() }).addTo(map);
-      markers[entry.id] = marker;
-      const timeRemaining = formatTime(entry.expiresAt - Date.now());
-      const deleteButtonHtml = (entry.createdBy === currentUserId)
-        ? `<button class="delete-btn"><i class="fas fa-trash"></i> Delete</button>`
-        : '';
-      const imageHtml = entry.imageUrl ? `<img src="${entry.imageUrl}" class="popup-image" alt="Food Image">` : '';
-      const popupEl = document.createElement('div');
-      popupEl.className = 'popup-content';
-      popupEl.innerHTML = `<div class="popup-header">
-          <span class="close-popup">&times;</span>
-          <h4>${entry.food}</h4>
-        </div>
-        <div class="popup-body">
-          <p>${entry.location}</p>
-          <p>כמות: ${entry.amount}</p>
-          <p style="font-size:0.8rem;color:#6c757d;">נגמר בעוד: ${timeRemaining}</p>
-          ${imageHtml}
-          <div class="rating">
-            <span class="star" data-value="1">&#9733;</span>
-            <span class="star" data-value="2">&#9733;</span>
-            <span class="star" data-value="3">&#9733;</span>
-            <span class="star" data-value="4">&#9733;</span>
-            <span class="star" data-value="5">&#9733;</span>
-          </div>
-        </div>
-        <div class="popup-footer">${deleteButtonHtml}</div>`;
-      marker.bindPopup(popupEl);
-      popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
-      if (deleteButtonHtml) {
-        popupEl.querySelector('.delete-btn').addEventListener('click', () => {
-          if (confirm('האם אתה בטוח שברצונך למחוק מיקום זה?')) {
-            deleteFoodLocation(entry.id);
-            marker.closePopup();
-          }
-        });
-      }
-     
-      // אירועי דירוג עם כוכבים
-      const stars = popupEl.querySelectorAll('.star');
-      stars.forEach(star => {
-        star.addEventListener('click', function() {
-          const rating = parseInt(this.getAttribute('data-value'));
-          stars.forEach(s => {
-            s.classList.toggle('selected', parseInt(s.getAttribute('data-value')) <= rating);
-          });
-          console.log(`Rated ${rating} stars for entry ${entry.id}`);
-        });
-      });
-    }
-   
-    // עדכון רשימת המיקומים
-    function updateFoodList() {
+
+    function renderList() {
       els.foodList.innerHTML = '';
       els.entriesCount.textContent = foodLocations.length;
-      els.emptyState.style.display = foodLocations.length === 0 ? 'block' : 'none';
-      foodLocations.sort((a, b) => b.timestamp - a.timestamp).forEach(entry => {
-        const timeRemaining = formatTime(entry.expiresAt - Date.now());
-        const imageElement = entry.imageUrl ? `<img src="${entry.imageUrl}" class="food-image-thumbnail" alt="Food Thumbnail">` : '';
-        const listItem = document.createElement('li');
-        listItem.className = 'food-item';
-        listItem.dataset.id = entry.id;
-        listItem.innerHTML = `<div>
-            <div class="food-name">${entry.food}</div>
-            <div class="food-location">${entry.location}</div>
-            <div class="expiry-info">נגמר בעוד: ${timeRemaining}</div>
-          </div>
-          <div style="display:flex;align-items:center;">
-            <span class="food-amount">${entry.amount}</span>
-            ${imageElement}
-          </div>`;
-        listItem.addEventListener('click', () => {
-          const marker = markers[entry.id];
-          if (marker) {
-            map.setView([entry.coordinates.lat, entry.coordinates.lng], 15);
-            marker.openPopup();
-          }
+      els.emptyState.style.display = foodLocations.length ? 'none' : 'flex';
+      foodLocations
+        .sort((a,b)=>b.timestamp-a.timestamp)
+        .forEach(e=>{
+          const li = document.createElement('li');
+          li.className='food-item';
+          li.innerHTML=`
+            <div>
+              <div class="food-name">${e.food}</div>
+              <div class="food-location">${e.location}</div>
+              <div class="expiry-info">נגמר בעוד: ${formatTime(e.expiresAt-Date.now())}</div>
+            </div>
+            <div style="display:flex;align-items:center;">
+              <span class="food-amount">${e.amount}</span>
+              ${e.imageUrl?`<img src="${e.imageUrl}" class="food-image-thumbnail">`:''}
+            </div>`;
+          li.addEventListener('click',()=>{
+            map.setView([e.coordinates.lat,e.coordinates.lng],15);
+            markers[e.id]?.openPopup();
+          });
+          els.foodList.appendChild(li);
         });
-        els.foodList.appendChild(listItem);
-      });
     }
-   
-    // פונקציית Toggle – משנה בין תצוגת הסרגל למפת מלאה
-    els.toggleBtn.addEventListener('click', () => {
-      const mainLayout = document.querySelector('.main-layout');
-      if (window.innerWidth >= 768) {
-        // במכשירי שולחן עבודה – שינוי בין סרגל + מפת לבין הצגת מפת מלאה
-        if (mainLayout.classList.contains('collapse-sidebar')) {
-          mainLayout.classList.remove('collapse-sidebar');
-          els.toggleBtn.innerHTML = '<i class="fas fa-arrow-left"></i>';
-        } else {
-          mainLayout.classList.add('collapse-sidebar');
-          els.toggleBtn.innerHTML = '<i class="fas fa-arrow-right"></i>';
-        }
-      } else {
-        // במכשירים ניידים – שינוי בין תצוגת הסרגל לתצוגת המפה
-        if (mainLayout.classList.contains('map-view')) {
-          mainLayout.classList.remove('map-view');
-          els.toggleBtn.innerHTML = '<i class="fas fa-arrow-right"></i>';
-        } else {
-          mainLayout.classList.add('map-view');
-          els.toggleBtn.innerHTML = '<i class="fas fa-arrow-left"></i>';
-          setTimeout(() => map.invalidateSize(), 100);
-        }
-      }
-    });
-   
-    // אתחול האפליקציה עם טעינת חלון
-    window.onload = async () => {
-      // בדיקת סשן התחברות
-      const { data: { session } } = await sb.auth.getSession();
-      if (session && session.user) {
-        currentUserId = session.user.id;
-        els.submitBtn.disabled = false;
-      } else {
-        currentUserId = null;
-        els.submitBtn.disabled = false; // מאפשר לחיצה שתביא לעמוד התחברות
-        els.submitBtn.textContent = "Log in to publish";
-      }
-     
-      map = L.map('map', { center: [31.7683, 35.2137], zoom: 8, minZoom: 7, maxZoom: 18 });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-     
-      map.on('click', e => {
-        const { lat, lng } = e.latlng;
-        selectedCoordinates = [lat, lng];
-        reverseGeocode(lat, lng);
-        clearTemporaryMarkers();
-        const popupEl = document.createElement('div');
-        popupEl.className = 'popup-content';
-        popupEl.innerHTML = `<div class="popup-header">
-            <span class="close-popup">&times;</span>
-            <h4>מיקום נבחר</h4>
-          </div>
+
+    function addMapMarker(e){
+      if(markers[e.id]) map.removeLayer(markers[e.id]);
+      const m=L.marker([e.coordinates.lat,e.coordinates.lng],{icon:createMarkerIcon()}).addTo(map);
+      m.bindPopup(`
+        <div class="popup-content">
+          <div class="popup-header"><span class="close-popup">&times;</span><h4>${e.food}</h4></div>
           <div class="popup-body">
-            <p>${lat.toFixed(5)}, ${lng.toFixed(5)}</p>
-          </div>`;
-        const marker = L.marker([lat, lng], { icon: createMarkerIcon(true) }).addTo(map);
-        marker.isTemporary = true;
-        markers.temp = marker;
-        marker.bindPopup(popupEl).openPopup();
-        popupEl.querySelector('.close-popup').addEventListener('click', () => marker.closePopup());
-        els.cancelBtn.style.display = 'block';
+            <p>${e.location}</p>
+            <p>כמות: ${e.amount}</p>
+            <p style="font-size:.8rem;color:#6c757d;">נגמר בעוד: ${formatTime(e.expiresAt-Date.now())}</p>
+            ${e.imageUrl?`<img src="${e.imageUrl}" class="popup-image">`:''}
+          </div>
+        </div>
+      `);
+      m.getPopup().on('add',()=>{
+        m.getPopup()._container.querySelector('.close-popup').onclick=()=>m.closePopup();
       });
-     
-      setTimeout(() => map.invalidateSize(), 100);
-      await fetchFoodLocations();
-     
+      markers[e.id]=m;
+    }
+
+    async function loadInitial(){
+      const now=Date.now();
+      const {data,error}=await sb.from('food_locations').select('*').gt('expiresAt',now);
+      if(error)return console.error(error);
+      foodLocations=data;
+      foodLocations.forEach(addMapMarker);
+      renderList();
+    }
+
+    function handleInsert({new:newE}){
+      if(newE.expiresAt<=Date.now())return;
+      foodLocations.push(newE);
+      addMapMarker(newE);
+      renderList();
+    }
+    function handleUpdate({new:upd}){
+      if(upd.expiresAt<=Date.now()){
+        foodLocations=foodLocations.filter(x=>x.id!==upd.id);
+        map.removeLayer(markers[upd.id]); delete markers[upd.id];
+      } else {
+        foodLocations=foodLocations.map(x=>x.id===upd.id?upd:x);
+        addMapMarker(upd);
+      }
+      renderList();
+    }
+    function handleDelete({old:oldE}){
+      foodLocations=foodLocations.filter(x=>x.id!==oldE.id);
+      map.removeLayer(markers[oldE.id]); delete markers[oldE.id];
+      renderList();
+    }
+
+    window.onload=async()=>{
+      const {data:{session}}=await sb.auth.getSession();
+      currentUserId=session?.user?.id||null;
+
+      map=L.map('map',{center:[31.7683,35.2137],zoom:8});
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+      await loadInitial();
+
       sb.channel('public:food_locations')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'food_locations' }, payload => {
-          let newEntry = payload.new;
-          if (!foodLocations.find(loc => loc.id === newEntry.id)) {
-            foodLocations.push(newEntry);
-            addMarkerForLocation(newEntry);
-            updateFoodList();
-          }
-        })
-        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'food_locations' }, payload => {
-          let deleted = payload.old;
-          foodLocations = foodLocations.filter(loc => loc.id !== deleted.id);
-          if (markers[deleted.id]) {
-            map.removeLayer(markers[deleted.id]);
-            delete markers[deleted.id];
-          }
-          updateFoodList();
-        })
-        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'food_locations' }, payload => {
-          let updated = payload.new;
-          foodLocations = foodLocations.map(loc => loc.id === updated.id ? updated : loc);
-          if (markers[updated.id]) {
-            map.removeLayer(markers[updated.id]);
-            delete markers[updated.id];
-          }
-          addMarkerForLocation(updated);
-          updateFoodList();
-        })
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:'food_locations'},handleInsert)
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'food_locations'},handleUpdate)
+        .on('postgres_changes',{event:'DELETE',schema:'public',table:'food_locations'},handleDelete)
         .subscribe();
-     
-      setInterval(() => {
-        const now = Date.now();
-        foodLocations.filter(entry => entry.expiresAt < now).forEach(entry => deleteFoodLocation(entry.id));
-      }, 60000);
+
+      setInterval(()=>{
+        const now=Date.now();
+        foodLocations.filter(e=>e.expiresAt<=now).forEach(e=>handleDelete({old:e}));
+      },60000);
+
+      els.toggleBtn.addEventListener('click',()=>{
+        const ml=document.querySelector('.main-layout');
+        if(window.innerWidth>=768){
+          ml.classList.toggle('collapse-sidebar');
+          els.toggleBtn.innerHTML=ml.classList.contains('collapse-sidebar')?'<i class="fas fa-arrow-left"></i>':'<i class="fas fa-arrow-right"></i>';
+        } else {
+          ml.classList.toggle('map-view');
+          els.toggleBtn.innerHTML=ml.classList.contains('map-view')?'<i class="fas fa-arrow-left"></i>':'<i class="fas fa-arrow-right"></i>';
+          setTimeout(()=>map.invalidateSize(),100);
+        }
+      });
     };
-
-    /* --- Hamburger Popup JavaScript (Added without altering other code) --- */
-    const hamburgerBtn = document.getElementById('hamburger-btn');
-    const hamburgerPopup = document.getElementById('hamburger-popup');
-    const popupCloseBtn = document.getElementById('popup-close-btn');
-    const navMap = document.getElementById('nav-map');
-    const navAbout = document.getElementById('nav-about');
-    const popupPageMap = document.getElementById('popup-page-map');
-    const popupPageAbout = document.getElementById('popup-page-about');
-
-    hamburgerBtn.addEventListener('click', () => {
-      hamburgerPopup.classList.add('open');
-    });
-
-    popupCloseBtn.addEventListener('click', () => {
-      hamburgerPopup.classList.remove('open');
-    });
-
-    navMap.addEventListener('click', () => {
-      navMap.classList.add('active');
-      navAbout.classList.remove('active');
-      popupPageMap.classList.add('active');
-      popupPageAbout.classList.remove('active');
-    });
-
-    navAbout.addEventListener('click', () => {
-      navAbout.classList.add('active');
-      navMap.classList.remove('active');
-      popupPageAbout.classList.add('active');
-      popupPageMap.classList.remove('active');
-    });
   </script>
 </body>
 </html>
