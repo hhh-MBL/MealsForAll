@@ -3,128 +3,116 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MealsForAll Map</title>
+  <title>MealsForAll Live Map</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
   <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-    }
-    #map {
-      width: 100%;
-      height: 100%;
-    }
+    html, body { height:100%; margin:0; padding:0; }
+    #map { width:100%; height:100%; }
     .custom-marker {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 28px;
-      color: #fff;
-      background: #4361ee;
-      border-radius: 50%;
-      width: 48px;
-      height: 48px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      display:flex; justify-content:center; align-items:center;
+      font-size:28px; color:#fff; background:#4361ee;
+      border-radius:50%; width:48px; height:48px;
+      box-shadow:0 2px 5px rgba(0,0,0,0.3);
     }
     .empty-state {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(255,255,255,0.8);
-      padding: 1rem 2rem;
-      border-radius: .5rem;
-      font-size: 1.2rem;
-      text-align: center;
+      position:absolute; top:50%; left:50%;
+      transform:translate(-50%, -50%);
+      background:rgba(255,255,255,0.8);
+      padding:1rem 2rem; border-radius:.5rem;
+      font-size:1.2rem; text-align:center;
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  
-  <!-- Leaflet & Supabase Libraries -->
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Replace with your Supabase credentials
-    const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
-    const sb = supabase.createClient(supabaseUrl, supabaseKey);
-    
+    // your Supabase creds
+    const URL = 'https://dieltjdqgeppyixximwe.supabase.co';
+    const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; 
+    const supabase = supabase.createClient(URL, KEY);
+
     let map, markers = {};
-    
-    // create the same custom icon you use on index.html
-    const createMarkerIcon = () => L.divIcon({
-      className: 'custom-marker',
-      html: `<i class="fas fa-utensils"></i>`,
-      iconSize: [48, 48],
-      iconAnchor: [24, 24]
+
+    // create icon
+    const createIcon = () => L.divIcon({
+      className:'custom-marker',
+      html:`<i class="fas fa-utensils"></i>`,
+      iconSize:[48,48], iconAnchor:[24,24]
     });
-    
-    function addMarkerForLocation(entry) {
-      const marker = L.marker(
-        [entry.coordinates.lat, entry.coordinates.lng], 
-        { icon: createMarkerIcon() }
-      ).addTo(map);
-      
-      const msLeft = entry.expiresAt - Date.now();
-      const hours = Math.floor(msLeft / (1000 * 60 * 60));
-      const minutes = Math.floor((msLeft % (1000 * 60 * 60)) / (1000 * 60));
-      const timeRemaining = `${hours}h ${minutes}m`;
-      
-      const popupContent = `
-        <div>
-          <h4>${entry.food}</h4>
-          <p>${entry.location}</p>
-          <p>Quantity: ${entry.amount}</p>
-          <p>Expires in: ${timeRemaining}</p>
-        </div>
-      `;
-      marker.bindPopup(popupContent);
-      
-      markers[entry.id] = marker;
+
+    function formatRemaining(expiresAt) {
+      const ms = expiresAt - Date.now();
+      const h = Math.floor(ms/(1000*60*60));
+      const m = Math.floor((ms%(1000*60*60))/(1000*60));
+      return `${h}h ${m}m`;
     }
-    
-    // fetch, filter out expired, then add markers
-    async function fetchFoodLocations() {
-      const now = Date.now();
-      const { data, error } = await sb
-        .from('food_locations')
-        .select('*');
-      
-      if (error) {
-        console.error("Error fetching food locations:", error);
-        return [];
+
+    function addMarker(entry) {
+      if (entry.expiresAt <= Date.now()) return;
+      const id = entry.id;
+      // if exists, remove old
+      if (markers[id]) map.removeLayer(markers[id]);
+
+      const m = L.marker([entry.coordinates.lat, entry.coordinates.lng], { icon:createIcon() })
+        .addTo(map)
+        .bindPopup(`
+          <div>
+            <h4>${entry.food}</h4>
+            <p>${entry.location}</p>
+            <p>Qty: ${entry.amount}</p>
+            <p>Expires in: ${formatRemaining(entry.expiresAt)}</p>
+          </div>
+        `);
+
+      markers[id] = m;
+    }
+
+    function removeMarker(id) {
+      if (markers[id]) {
+        map.removeLayer(markers[id]);
+        delete markers[id];
       }
-      
-      // filter out expired entries
-      return data.filter(entry => entry.expiresAt > now);
     }
-    
-    window.onload = async () => {
-      // init map
-      map = L.map('map', {
-        center: [31.7683, 35.2137],
-        zoom: 8
-      });
+
+    // initial load
+    async function init() {
+      map = L.map('map',{ center:[31.7683,35.2137], zoom:8 });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-      
-      // load data
-      const validLocations = await fetchFoodLocations();
-      
-      if (validLocations.length === 0) {
-        // show empty state
-        const msg = document.createElement('div');
-        msg.classList.add('empty-state');
-        msg.innerText = 'אין נקודות מזון זמינות כרגע.';
-        document.body.appendChild(msg);
-        return;
+
+      const { data, error } = await supabase
+        .from('food_locations')
+        .select('*')
+        .gt('expiresAt', Date.now());
+
+      if (error) { console.error(error); return; }
+      if (data.length===0) {
+        document.body.innerHTML += `<div class="empty-state">אין נקודות מזון זמינות כרגע.</div>`;
+      } else {
+        data.forEach(addMarker);
       }
-      
-      validLocations.forEach(addMarkerForLocation);
-    };
+
+      // subscribe to Realtime
+      supabase
+        .channel('public:food_locations')
+        .on('postgres_changes', { event:'INSERT', schema:'public', table:'food_locations' }, (msg) => {
+          addMarker(msg.new);
+        })
+        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'food_locations' }, (msg) => {
+          // if expired, remove; else update
+          if (msg.new.expiresAt <= Date.now()) removeMarker(msg.new.id);
+          else addMarker(msg.new);
+        })
+        .on('postgres_changes', { event:'DELETE', schema:'public', table:'food_locations' }, (msg) => {
+          removeMarker(msg.old.id);
+        })
+        .subscribe();
+    }
+
+    window.onload = init;
   </script>
 </body>
 </html>
