@@ -2,19 +2,21 @@
 <html lang="he">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MealsForAll</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.css" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"/>
   <style>
+    /* בסיס – עיצובים כלליים */
     * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
     body { background:#f8f9fa; }
     .app-container { max-width:1200px; margin:auto; padding:1rem; }
     .app-title { font-size:2rem; color:#4361ee; margin-bottom:1rem; text-align:center; }
     .main-layout { display:grid; gap:1rem; height:calc(100vh - 100px); }
-    @media (min-width:768px) { .main-layout { grid-template-columns:280px 1fr; } }
+    @media (min-width:768px) {
+      .main-layout { grid-template-columns:280px 1fr; }
+      .main-layout.collapse-sidebar { grid-template-columns:1fr; }
+    }
     @media (max-width:767px) {
       .main-layout { display:block; }
       .sidebar { display:block; }
@@ -31,10 +33,10 @@
     .input-with-icon i { position:absolute; left:.7rem; top:50%; transform:translateY(-50%); color:#adb5bd; }
     input { width:100%; padding:.7rem 1rem .7rem 2rem; border:1px solid #dee2e6; border-radius:8px; }
     input:focus { outline:none; border-color:#4361ee; }
+    .button-group { display:flex; gap:.5rem; }
     .btn { padding:.7rem; border:none; border-radius:8px; font-weight:500; cursor:pointer; }
     .btn-primary { background:#4361ee; color:#fff; width:100%; }
     .btn-danger { background:#ef233c; color:#fff; }
-    .button-group { display:flex; gap:.5rem; }
     #cancel-btn { display:none; }
     .food-entries { margin-top:auto; max-height:250px; overflow-y:auto; }
     .entries-title { display:flex; justify-content:space-between; margin-bottom:.5rem; }
@@ -45,9 +47,10 @@
     .food-location { font-size:.85rem; color:#6c757d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .food-amount { background:#4361ee; color:#fff; border-radius:12px; font-size:.8rem; padding:2px 6px; margin-left:.5rem; }
     .loading-spinner { display:none; width:16px; height:16px; border:2px solid rgba(0,0,0,0.1); border-left-color:#4361ee; border-radius:50%; animation:spin 1s linear infinite; margin-left:8px; }
-    @keyframes spin { to { transform:rotate(360deg); } }
+    @keyframes spin { to{transform:rotate(360deg);} }
     .custom-marker { display:flex; justify-content:center; align-items:center; font-size:28px; color:#fff; background:#4361ee; border-radius:50%; width:48px; height:48px; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
-    .popup-content { padding:8px; direction:rtl; text-align:right; max-width:250px; }
+    .marker-temp { background:#ef233c; }
+    .popup-content { padding:8px; position:relative; max-width:250px; direction:rtl; text-align:right; }
     .popup-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
     .popup-header h4 { margin:0; font-size:1rem; }
     .popup-body p { margin:4px 0; }
@@ -61,13 +64,45 @@
     .upload-btn input[type=file] { position:absolute; left:0; top:0; opacity:0; width:100%; height:100%; cursor:pointer; }
     .food-image-thumbnail { width:50px; height:50px; border-radius:4px; margin-left:8px; object-fit:cover; }
     .popup-image { width:100%; max-height:150px; object-fit:cover; border-radius:6px; margin-top:8px; }
+    .rating { display:flex; justify-content:center; margin-top:8px; }
+    .rating .star { font-size:1.5rem; color:#ccc; cursor:pointer; margin:0 2px; }
+    .rating .star.selected { color:#FFD700; }
     #toggle-map-btn { position:fixed; right:10px; bottom:10px; background:#4361ee; color:#fff; border:none; border-radius:50%; z-index:1000; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
-    @media (max-width:767px) { #toggle-map-btn { width:50px; height:50px; } }
-    @media (min-width:768px) { #toggle-map-btn { width:40px; height:40px; } }
+    @media (max-width:767px){#toggle-map-btn{width:50px;height:50px;}} 
+    @media (min-width:768px){#toggle-map-btn{width:40px;height:40px;}}
     .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:1rem; }
+    .hamburger-btn { position:fixed; top:12px; right:8px; z-index:1100; background:transparent; border:none; font-size:32px; color:#4361ee; cursor:pointer; }
+    .hamburger-popup { position:fixed; top:0; right:-320px; width:320px; height:100%; background:#fff; box-shadow:-4px 0 15px rgba(0,0,0,0.2); transition:right .3s ease; z-index:1050; padding:1.5rem; overflow-y:auto; }
+    .hamburger-popup.open { right:0; }
+    .popup-close-btn { background:transparent; border:none; font-size:28px; cursor:pointer; color:#4361ee; position:absolute; top:10px; left:10px; }
+    .popup-nav { margin-top:50px; display:flex; justify-content:space-around; border-bottom:2px solid #eee; padding-bottom:.5rem; margin-bottom:1rem; }
+    .nav-btn { background:none; border:none; font-size:1.1rem; color:#333; cursor:pointer; padding:.5rem 1rem; }
+    .nav-btn.active { color:#4361ee; border-bottom:2px solid #4361ee; }
+    .popup-page { display:none; }
+    .popup-page.active { display:block; }
+    .auth-links-popup { text-align:center; margin-top:1rem; border-top:1px solid #eee; padding-top:1rem; }
+    .auth-links-popup a { margin:0 .5rem; text-decoration:underline; color:#4361ee; }
   </style>
 </head>
 <body>
+  <button id="hamburger-btn" class="hamburger-btn"><i class="fas fa-bars"></i></button>
+  <div id="hamburger-popup" class="hamburger-popup">
+    <button id="popup-close-btn" class="popup-close-btn"><i class="fas fa-times"></i></button>
+    <div class="popup-nav">
+      <button id="nav-map" class="nav-btn active">Map</button>
+      <button id="nav-about" class="nav-btn">About</button>
+    </div>
+    <div id="popup-page-map" class="popup-page active">
+      <a href="map.html" class="btn btn-primary" style="margin-bottom:1rem;">Open Full Map</a>
+    </div>
+    <div id="popup-page-about" class="popup-page">
+      <a href="about.html" class="btn btn-primary" style="margin-bottom:1rem;">About</a>
+    </div>
+    <div class="auth-links-popup">
+      <a href="login.html">Login</a> | <a href="register.html">Signup</a>
+    </div>
+  </div>
+
   <div class="app-container">
     <h1 class="app-title">MealsForAll</h1>
     <div style="text-align:center; margin-bottom:1rem;">
@@ -80,7 +115,7 @@
           <label for="location">מיקום</label>
           <div class="input-with-icon">
             <i class="fas fa-map-marker-alt"></i>
-            <input type="text" id="location" placeholder="הזן כתובת מלאה" />
+            <input type="text" id="location" placeholder="הזן כתובת מלאה"/>
             <div id="loading-spinner" class="loading-spinner"></div>
           </div>
         </div>
@@ -88,30 +123,30 @@
           <label for="food">סוג מזון</label>
           <div class="input-with-icon">
             <i class="fas fa-utensils"></i>
-            <input type="text" id="food" placeholder="איזה מזון זמין כאן?" />
+            <input type="text" id="food" placeholder="איזה מזון זמין כאן?"/>
           </div>
         </div>
         <div class="form-group">
           <label for="phone">טלפון</label>
           <div class="input-with-icon">
             <i class="fas fa-phone"></i>
-            <input type="text" id="phone" placeholder="הזן מספר טלפון" />
+            <input type="text" id="phone" placeholder="הזן מספר טלפון"/>
           </div>
         </div>
         <div class="form-group">
           <label for="amount">כמות</label>
           <div class="input-with-icon">
             <i class="fas fa-hashtag"></i>
-            <input type="number" id="amount" min="1" value="1" />
+            <input type="number" id="amount" min="1" value="1"/>
           </div>
         </div>
         <div class="form-group image-upload">
           <button class="upload-btn">
             <i class="fas fa-camera"></i> העלה תמונה
-            <input type="file" id="food-image" accept="image/*" />
+            <input type="file" id="food-image" accept="image/*"/>
           </button>
           <div style="position:relative;">
-            <img id="image-preview" class="image-preview" alt="תצוגה מקדימה" />
+            <img id="image-preview" class="image-preview" alt="תצוגה מקדימה"/>
             <span id="remove-image" class="remove-image">&times;</span>
           </div>
         </div>
@@ -124,7 +159,10 @@
             <h2 style="font-size:1.1rem;">מיקומי מזון זמינים</h2>
             <span id="entries-count" class="entries-counter">0</span>
           </div>
-          <div id="empty-state" class="empty-state"><i class="fas fa-map" style="font-size:2rem;margin-bottom:.5rem;"></i><p>אין מיקומים זמינים</p></div>
+          <div id="empty-state" class="empty-state">
+            <i class="fas fa-map" style="font-size:2rem; margin-bottom:.5rem;"></i>
+            <p>אין מיקומים זמינים</p>
+          </div>
           <ul id="food-list" class="food-list"></ul>
         </div>
       </div>
@@ -133,152 +171,211 @@
   </div>
   <button id="toggle-map-btn"><i class="fas fa-arrow-right"></i></button>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPA_URL = 'https://dieltjdqgeppyixximwe.supabase.co';
-    const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
+    const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh...YOUR_FULL_KEY...HBS1TMwtw';
     const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-    let currentUserId = null;
-    let map, markers = {}, foodLocations = [];
-    const els = {
-      location: document.getElementById('location'),
-      food: document.getElementById('food'),
-      phone: document.getElementById('phone'),
-      amount: document.getElementById('amount'),
-      foodImage: document.getElementById('food-image'),
-      imagePreview: document.getElementById('image-preview'),
-      removeImage: document.getElementById('remove-image'),
-      submitBtn: document.getElementById('submit-btn'),
-      cancelBtn: document.getElementById('cancel-btn'),
-      loadingSpinner: document.getElementById('loading-spinner'),
-      foodList: document.getElementById('food-list'),
-      entriesCount: document.getElementById('entries-count'),
-      emptyState: document.getElementById('empty-state'),
-      toggleBtn: document.getElementById('toggle-map-btn')
+    let currentUserId=null, map, markers={}, foodLocations=[], selectedCoordinates=null, selectedImage=null;
+
+    const els={
+      location:document.getElementById('location'),
+      food:document.getElementById('food'),
+      phone:document.getElementById('phone'),
+      amount:document.getElementById('amount'),
+      loading:document.getElementById('loading-spinner'),
+      submit:document.getElementById('submit-btn'),
+      cancel:document.getElementById('cancel-btn'),
+      foodImage:document.getElementById('food-image'),
+      preview:document.getElementById('image-preview'),
+      removeImg:document.getElementById('remove-image'),
+      list:document.getElementById('food-list'),
+      count:document.getElementById('entries-count'),
+      empty:document.getElementById('empty-state'),
+      toggle:document.getElementById('toggle-map-btn'),
+      hbBtn:document.getElementById('hamburger-btn'),
+      hbPopup:document.getElementById('hamburger-popup'),
+      popClose:document.getElementById('popup-close-btn'),
+      navMap:document.getElementById('nav-map'),
+      navAbout:document.getElementById('nav-about'),
+      pageMap:document.getElementById('popup-page-map'),
+      pageAbout:document.getElementById('popup-page-about')
     };
 
-    const formatTime = ms => {
-      const h = Math.floor(ms/3600000);
-      const m = Math.floor((ms%3600000)/60000);
+    const formatTime=ms=>{
+      const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000);
       return `${h}h ${m}m`;
     };
 
-    const createMarkerIcon = () => L.divIcon({
-      className:'custom-marker',
-      html:'<i class="fas fa-utensils"></i>',
-      iconSize:[48,48],
-      iconAnchor:[24,24]
+    const createIcon=temp=>L.divIcon({
+      className:'custom-marker'+(temp?' marker-temp':''),
+      html:`<i class="fas fa-${temp?'crosshairs':'utensils'}"></i>`,
+      iconSize:[48,48],iconAnchor:[24,24]
     });
 
-    function renderList() {
-      els.foodList.innerHTML = '';
-      els.entriesCount.textContent = foodLocations.length;
-      els.emptyState.style.display = foodLocations.length ? 'none' : 'flex';
-      foodLocations
-        .sort((a,b)=>b.timestamp-a.timestamp)
-        .forEach(e=>{
-          const li = document.createElement('li');
-          li.className='food-item';
-          li.innerHTML=`
-            <div>
-              <div class="food-name">${e.food}</div>
-              <div class="food-location">${e.location}</div>
-              <div class="expiry-info">נגמר בעוד: ${formatTime(e.expiresAt-Date.now())}</div>
-            </div>
-            <div style="display:flex;align-items:center;">
-              <span class="food-amount">${e.amount}</span>
-              ${e.imageUrl?`<img src="${e.imageUrl}" class="food-image-thumbnail">`:''}
-            </div>`;
-          li.addEventListener('click',()=>{
-            map.setView([e.coordinates.lat,e.coordinates.lng],15);
-            markers[e.id]?.openPopup();
-          });
-          els.foodList.appendChild(li);
-        });
+    function renderList(){
+      els.list.innerHTML='';
+      els.count.textContent=foodLocations.length;
+      els.empty.style.display=foodLocations.length?'none':'flex';
+      foodLocations.sort((a,b)=>b.timestamp-a.timestamp).forEach(e=>{
+        const li=document.createElement('li');
+        li.className='food-item';
+        li.innerHTML=`
+          <div>
+            <div class="food-name">${e.food}</div>
+            <div class="food-location">${e.location}</div>
+            <div class="expiry-info">נגמר בעוד: ${formatTime(e.expiresAt-Date.now())}</div>
+          </div>
+          <div style="display:flex;align-items:center;">
+            <span class="food-amount">${e.amount}</span>
+            ${e.imageUrl?`<img src="${e.imageUrl}" class="food-image-thumbnail">`:''}
+          </div>`;
+        li.onclick=()=>{map.setView([e.coordinates.lat,e.coordinates.lng],15);markers[e.id]?.openPopup();};
+        els.list.appendChild(li);
+      });
     }
 
-    function addMapMarker(e){
-      if(markers[e.id]) map.removeLayer(markers[e.id]);
-      const m=L.marker([e.coordinates.lat,e.coordinates.lng],{icon:createMarkerIcon()}).addTo(map);
-      m.bindPopup(`
-        <div class="popup-content">
-          <div class="popup-header"><span class="close-popup">&times;</span><h4>${e.food}</h4></div>
-          <div class="popup-body">
-            <p>${e.location}</p>
-            <p>כמות: ${e.amount}</p>
-            <p style="font-size:.8rem;color:#6c757d;">נגמר בעוד: ${formatTime(e.expiresAt-Date.now())}</p>
-            ${e.imageUrl?`<img src="${e.imageUrl}" class="popup-image">`:''}
-          </div>
-        </div>
-      `);
-      m.getPopup().on('add',()=>{
-        m.getPopup()._container.querySelector('.close-popup').onclick=()=>m.closePopup();
-      });
-      markers[e.id]=m;
+    function addMarker(e,temp=false){
+      if(!temp&&markers[e.id])map.removeLayer(markers[e.id]);
+      const m=L.marker([e.coordinates.lat,e.coordinates.lng],{icon:createIcon(temp)})
+        .addTo(map)
+        .bindPopup(`
+          <div class="popup-content">
+            <div class="popup-header">
+              <span class="close-popup">&times;</span>
+              <h4>${e.food}</h4>
+            </div>
+            <div class="popup-body">
+              <p>${e.location}</p>
+              <p>כמות: ${e.amount}</p>
+              <p style="font-size:.8rem;color:#6c757d;">נגמר בעוד: ${formatTime(e.expiresAt-Date.now())}</p>
+              ${e.imageUrl?`<img src="${e.imageUrl}" class="popup-image">`:''}
+            </div>
+          </div>`);
+      m.getPopup().on('add',()=>m.getPopup()._container.querySelector('.close-popup').onclick=()=>m.closePopup());
+      if(temp)markers.temp=m;else markers[e.id]=m;
     }
 
     async function loadInitial(){
       const now=Date.now();
-      const {data,error}=await sb.from('food_locations').select('*').gt('expiresAt',now);
-      if(error)return console.error(error);
+      const{data,error}=await sb.from('food_locations').select('*').gt('expiresAt',now);
+      if(error){console.error(error);return;}
       foodLocations=data;
-      foodLocations.forEach(addMapMarker);
+      foodLocations.forEach(e=>addMarker(e));
       renderList();
     }
 
-    function handleInsert({new:newE}){
-      if(newE.expiresAt<=Date.now())return;
-      foodLocations.push(newE);
-      addMapMarker(newE);
+    function onInsert({new:e}){if(e.expiresAt>Date.now()){foodLocations.push(e);addMarker(e);renderList();}}
+    function onUpdate({new:e}){
+      if(e.expiresAt<=Date.now()){foodLocations=foodLocations.filter(x=>x.id!==e.id);map.removeLayer(markers[e.id]);delete markers[e.id];}
+      else{foodLocations=foodLocations.map(x=>x.id===e.id?e:x);addMarker(e);}
       renderList();
     }
-    function handleUpdate({new:upd}){
-      if(upd.expiresAt<=Date.now()){
-        foodLocations=foodLocations.filter(x=>x.id!==upd.id);
-        map.removeLayer(markers[upd.id]); delete markers[upd.id];
-      } else {
-        foodLocations=foodLocations.map(x=>x.id===upd.id?upd:x);
-        addMapMarker(upd);
-      }
-      renderList();
+    function onDelete({old:e}){foodLocations=foodLocations.filter(x=>x.id!==e.id);map.removeLayer(markers[e.id]);delete markers[e.id];renderList();}
+
+    function setupMapClick(){
+      map.on('click',async ev=>{
+        const{lat,lng}=ev.latlng;
+        els.loading.style.display='inline-block';
+        try{
+          const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+          const js=await res.json();
+          els.location.value=js.display_name||`${lat.toFixed(5)},${lng.toFixed(5)}`;
+        }catch{els.location.value=`${lat.toFixed(5)},${lng.toFixed(5)}`;}
+        els.loading.style.display='none';
+        if(markers.temp){map.removeLayer(markers.temp);delete markers.temp;}
+        addMarker({coordinates:{lat,lng},food:'',location:'',amount:0,expiresAt:Date.now()+1},true);
+        selectedCoordinates=[lat,lng];
+        els.cancel.style.display='block';
+      });
     }
-    function handleDelete({old:oldE}){
-      foodLocations=foodLocations.filter(x=>x.id!==oldE.id);
-      map.removeLayer(markers[oldE.id]); delete markers[oldE.id];
-      renderList();
+
+    async function uploadImage(file,id){
+      if(!file)return null;
+      if(!file.type.startsWith("image/")){alert("The file provided is not an image.");return null;}
+      try{
+        const ext=file.name.split('.').pop();
+        const name=`${id}_${Date.now()}_${Math.random().toString(36).substr(2,5)}.${ext}`;
+        const{data,error}=await sb.storage.from('food_images').upload(name,file,{cacheControl:'3600',upsert:false});
+        if(error){console.error(error);alert("Error uploading image.");return null;}
+        const{data:pubData,error:pubErr}=sb.storage.from('food_images').getPublicUrl(name);
+        if(pubErr){console.error(pubErr);alert("Error getting image URL.");return null;}
+        return pubData.publicUrl;
+      }catch(e){console.error(e);alert("Error uploading image.");return null;}
+    }
+
+    async function addNewFoodEntry(){
+      const loc=els.location.value.trim(),food=els.food.value.trim(),phone=els.phone.value.trim(),amt=els.amount.value.trim();
+      if(!loc||!food||!phone||!amt){alert('Please fill in all fields!');return;}
+      if(!selectedCoordinates){alert('Please select a location on the map or type the full address.');return;}
+      const now=Date.now();
+      try{
+        let imageUrl=null;
+        if(selectedImage)imageUrl=await uploadImage(selectedImage,now.toString());
+        const entry={location:loc,food,phone,amount:parseInt(amt),coordinates:{lat:selectedCoordinates[0],lng:selectedCoordinates[1]},timestamp:now,expiresAt:now+24*60*60*1000,imageUrl,createdBy:currentUserId};
+        const{error}=await sb.from('food_locations').insert([entry]);
+        if(error){console.error(error);throw error;}
+        els.location.value='';els.food.value='';els.phone.value='';els.amount.value='1';
+        els.preview.style.display='none';els.preview.src='';els.removeImg.style.display='none';selectedImage=null;
+        selectedCoordinates=null;if(markers.temp){map.removeLayer(markers.temp);delete markers.temp;}
+        els.cancel.style.display='none';
+      }catch(e){console.error(e);alert("Error adding food location. Please try again.");}
+    }
+
+    async function deleteFoodLocation(id){
+      try{
+        const{error}=await sb.from('food_locations').delete().eq('id',id);
+        if(error)throw error;
+      }catch(e){console.error(e);alert("Error deleting food location.");}
     }
 
     window.onload=async()=>{
-      const {data:{session}}=await sb.auth.getSession();
+      const{data:{session}}=await sb.auth.getSession();
       currentUserId=session?.user?.id||null;
-
       map=L.map('map',{center:[31.7683,35.2137],zoom:8});
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
+      setupMapClick();
       await loadInitial();
-
       sb.channel('public:food_locations')
-        .on('postgres_changes',{event:'INSERT',schema:'public',table:'food_locations'},handleInsert)
-        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'food_locations'},handleUpdate)
-        .on('postgres_changes',{event:'DELETE',schema:'public',table:'food_locations'},handleDelete)
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:'food_locations'},onInsert)
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'food_locations'},onUpdate)
+        .on('postgres_changes',{event:'DELETE',schema:'public',table:'food_locations'},onDelete)
         .subscribe();
-
-      setInterval(()=>{
-        const now=Date.now();
-        foodLocations.filter(e=>e.expiresAt<=now).forEach(e=>handleDelete({old:e}));
-      },60000);
-
-      els.toggleBtn.addEventListener('click',()=>{
+      setInterval(()=>foodLocations.filter(e=>e.expiresAt<=Date.now()).forEach(e=>onDelete({old:e})),60000);
+      els.foodImage.addEventListener('change',function(){
+        if(this.files&&this.files[0]){
+          selectedImage=this.files[0];
+          const r=new FileReader();
+          r.onload=e=>{els.preview.src=e.target.result;els.preview.style.display='block';els.removeImg.style.display='block';};
+          r.readAsDataURL(selectedImage);
+        }
+      });
+      els.removeImg.addEventListener('click',()=>{els.preview.style.display='none';els.preview.src='';els.removeImg.style.display='none';selectedImage=null;});
+      els.submit.addEventListener('click',()=>{if(!currentUserId){window.location.href='login.html';return;}addNewFoodEntry();});
+      els.cancel.addEventListener('click',()=>{if(markers.temp){map.removeLayer(markers.temp);delete markers.temp;}selectedCoordinates=null;els.location.value='';els.cancel.style.display='none';});
+      els.toggle.addEventListener('click',()=>{
         const ml=document.querySelector('.main-layout');
         if(window.innerWidth>=768){
           ml.classList.toggle('collapse-sidebar');
-          els.toggleBtn.innerHTML=ml.classList.contains('collapse-sidebar')?'<i class="fas fa-arrow-left"></i>':'<i class="fas fa-arrow-right"></i>';
-        } else {
+          els.toggle.innerHTML=ml.classList.contains('collapse-sidebar')?'<i class="fas fa-arrow-left"></i>':'<i class="fas fa-arrow-right"></i>';
+        }else{
           ml.classList.toggle('map-view');
-          els.toggleBtn.innerHTML=ml.classList.contains('map-view')?'<i class="fas fa-arrow-left"></i>':'<i class="fas fa-arrow-right"></i>';
+          els.toggle.innerHTML=ml.classList.contains('map-view')?'<i class="fas fa-arrow-left"></i>':'<i class="fas fa-arrow-right"></i>';
           setTimeout(()=>map.invalidateSize(),100);
         }
       });
+      els.hbBtn.onclick=()=>els.hbPopup.classList.add('open');
+      els.popClose.onclick=()=>els.hbPopup.classList.remove('open');
+      els.navMap.onclick=()=>{
+        els.navMap.classList.add('active');els.navAbout.classList.remove('active');
+        els.pageMap.classList.add('active');els.pageAbout.classList.remove('active');
+      };
+      els.navAbout.onclick=()=>{
+        els.navAbout.classList.add('active');els.navMap.classList.remove('active');
+        els.pageAbout.classList.add('active');els.pageMap.classList.remove('active');
+      };
     };
   </script>
 </body>
