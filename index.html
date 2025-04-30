@@ -7,26 +7,22 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"/>
   <style>
-    /* בסיס – עיצובים כלליים */
-    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', sans-serif; }
+    /* General styles */
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
     body { background:#f8f9fa; }
     .app-container { max-width:1200px; margin:auto; padding:1rem; }
-    .app-title { font-size:2rem; color:#4361ee; margin-bottom:1rem; text-align:center; }
+    .app-title { font-size:2rem; color:#4361ee; text-align:center; margin-bottom:1rem; }
     .main-layout { display:grid; gap:1rem; height:calc(100vh - 100px); }
-    @media (min-width:768px) {
-      .main-layout { grid-template-columns:280px 1fr; }
-      .main-layout.collapse-sidebar { grid-template-columns:1fr; }
-    }
+    @media (min-width:768px) { .main-layout { grid-template-columns:280px 1fr; } }
     @media (max-width:767px) {
       .main-layout { display:block; }
-      .sidebar { display:block; }
       #map-container { display:none; }
       .main-layout.map-view #map-container { display:block; }
       .main-layout.map-view .sidebar { display:none; }
     }
     .sidebar, #map-container, #map { border-radius:10px; box-shadow:0 4px 8px rgba(0,0,0,0.05); }
     .sidebar { background:#fff; padding:1rem; display:flex; flex-direction:column; }
-    #map-container, #map { height:100%; overflow:hidden; }
+    #map-container, #map { height:100%; }
     .form-group { margin-bottom:1rem; }
     label { display:block; margin-bottom:.3rem; font-weight:500; }
     .input-with-icon { position:relative; }
@@ -50,7 +46,7 @@
     @keyframes spin { to{transform:rotate(360deg);} }
     .custom-marker { display:flex; justify-content:center; align-items:center; font-size:28px; color:#fff; background:#4361ee; border-radius:50%; width:48px; height:48px; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
     .marker-temp { background:#ef233c; }
-    .popup-content { padding:8px; position:relative; max-width:250px; direction:rtl; text-align:right; }
+    .popup-content { padding:8px; max-width:250px; direction:rtl; text-align:right; }
     .popup-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
     .popup-header h4 { margin:0; font-size:1rem; }
     .popup-body p { margin:4px 0; }
@@ -59,22 +55,22 @@
     .delete-btn { background:#ef233c; color:#fff; border:none; border-radius:4px; padding:4px 8px; font-size:.8rem; cursor:pointer; }
     .image-upload { display:flex; align-items:center; margin-bottom:1rem; }
     .image-preview { width:60px; height:60px; border-radius:8px; object-fit:cover; display:none; }
-    .remove-image { position:absolute; top:0; right:0; background:rgba(0,0,0,0.6); color:#fff; padding:2px 6px; font-size:1rem; cursor:pointer; display:none; }
+    .remove-image { position:absolute; top:0; right:0; background:rgba(0,0,0,0.6); color:#fff; padding:2px 6px; cursor:pointer; display:none; }
     .upload-btn { position:relative; overflow:hidden; background:#f8f9fa; color:#495057; padding:.5rem; border:none; border-radius:8px; cursor:pointer; }
-    .upload-btn input[type=file] { position:absolute; left:0; top:0; opacity:0; width:100%; height:100%; cursor:pointer; }
+    .upload-btn input { position:absolute; left:0; top:0; opacity:0; width:100%; height:100%; }
     .food-image-thumbnail { width:50px; height:50px; border-radius:4px; margin-left:8px; object-fit:cover; }
     .popup-image { width:100%; max-height:150px; object-fit:cover; border-radius:6px; margin-top:8px; }
     .rating { display:flex; justify-content:center; margin-top:8px; }
     .rating .star { font-size:1.5rem; color:#ccc; cursor:pointer; margin:0 2px; }
     .rating .star.selected { color:#FFD700; }
     #toggle-map-btn { position:fixed; right:10px; bottom:10px; background:#4361ee; color:#fff; border:none; border-radius:50%; z-index:1000; box-shadow:0 2px 5px rgba(0,0,0,0.3); }
-    @media (max-width:767px){#toggle-map-btn{width:50px;height:50px;}} 
-    @media (min-width:768px){#toggle-map-btn{width:40px;height:40px;}}
+    @media (max-width:767px){ #toggle-map-btn{width:50px;height:50px;} }
+    @media (min-width:768px){ #toggle-map-btn{width:40px;height:40px;} }
     .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:1rem; }
     .hamburger-btn { position:fixed; top:12px; right:8px; z-index:1100; background:transparent; border:none; font-size:32px; color:#4361ee; cursor:pointer; }
     .hamburger-popup { position:fixed; top:0; right:-320px; width:320px; height:100%; background:#fff; box-shadow:-4px 0 15px rgba(0,0,0,0.2); transition:right .3s ease; z-index:1050; padding:1.5rem; overflow-y:auto; }
     .hamburger-popup.open { right:0; }
-    .popup-close-btn { background:transparent; border:none; font-size:28px; cursor:pointer; color:#4361ee; position:absolute; top:10px; left:10px; }
+    .popup-close-btn { position:absolute; top:10px; left:10px; background:transparent; border:none; font-size:28px; color:#4361ee; cursor:pointer; }
     .popup-nav { margin-top:50px; display:flex; justify-content:space-around; border-bottom:2px solid #eee; padding-bottom:.5rem; margin-bottom:1rem; }
     .nav-btn { background:none; border:none; font-size:1.1rem; color:#333; cursor:pointer; padding:.5rem 1rem; }
     .nav-btn.active { color:#4361ee; border-bottom:2px solid #4361ee; }
@@ -85,7 +81,7 @@
   </style>
 </head>
 <body>
-  <!-- Hamburger Popup -->
+  <!-- Hamburger -->
   <button id="hamburger-btn" class="hamburger-btn"><i class="fas fa-bars"></i></button>
   <div id="hamburger-popup" class="hamburger-popup">
     <button id="popup-close-btn" class="popup-close-btn"><i class="fas fa-times"></i></button>
@@ -106,17 +102,17 @@
 
   <div class="app-container">
     <h1 class="app-title">MealsForAll</h1>
-    <div style="text-align:center; margin-bottom:1rem;">
+    <div style="text-align:center;margin-bottom:1rem;">
       <a href="login.html">login</a> | <a href="register.html">register</a>
     </div>
     <div class="main-layout">
       <div class="sidebar">
-        <h2 style="margin-bottom:1rem; font-size:1.2rem;">הוסף מיקום מזון</h2>
+        <h2 style="margin-bottom:1rem;font-size:1.2rem;">הוסף מיקום מזון</h2>
         <div class="form-group">
           <label for="location">מיקום</label>
           <div class="input-with-icon">
             <i class="fas fa-map-marker-alt"></i>
-            <input type="text" id="location" placeholder="הזן כתובת מלאה"/>
+            <input id="location" type="text" placeholder="הזן כתובת מלאה"/>
             <div id="loading-spinner" class="loading-spinner"></div>
           </div>
         </div>
@@ -124,30 +120,30 @@
           <label for="food">סוג מזון</label>
           <div class="input-with-icon">
             <i class="fas fa-utensils"></i>
-            <input type="text" id="food" placeholder="איזה מזון זמין כאן?"/>
+            <input id="food" type="text" placeholder="איזה מזון זמין כאן?"/>
           </div>
         </div>
         <div class="form-group">
           <label for="phone">טלפון</label>
           <div class="input-with-icon">
             <i class="fas fa-phone"></i>
-            <input type="text" id="phone" placeholder="הזן מספר טלפון"/>
+            <input id="phone" type="text" placeholder="הזן מספר טלפון"/>
           </div>
         </div>
         <div class="form-group">
           <label for="amount">כמות</label>
           <div class="input-with-icon">
             <i class="fas fa-hashtag"></i>
-            <input type="number" id="amount" min="1" value="1"/>
+            <input id="amount" type="number" min="1" value="1"/>
           </div>
         </div>
         <div class="form-group image-upload">
           <button class="upload-btn">
             <i class="fas fa-camera"></i> העלה תמונה
-            <input type="file" id="food-image" accept="image/*"/>
+            <input id="food-image" type="file" accept="image/*"/>
           </button>
           <div style="position:relative;">
-            <img id="image-preview" class="image-preview" alt="תצוגה מקדימה"/>
+            <img id="image-preview" class="image-preview" alt="Preview"/>
             <span id="remove-image" class="remove-image">&times;</span>
           </div>
         </div>
@@ -212,14 +208,12 @@
       return `${h}h ${m}m`;
     };
 
-    // Marker icon factory
     const createIcon = isTemp => L.divIcon({
-      className: 'custom-marker' + (isTemp?' marker-temp':''),
+      className: 'custom-marker'+(isTemp?' marker-temp':''),
       html: `<i class="fas fa-${isTemp?'crosshairs':'utensils'}"></i>`,
       iconSize:[48,48], iconAnchor:[24,24]
     });
 
-    // Render sidebar list
     function renderList(){
       els.list.innerHTML = '';
       els.count.textContent = foodLocations.length;
@@ -245,154 +239,122 @@
       });
     }
 
-    // Add a marker for published entries
-    function addMarker(e, isTemp=false){
-      if(!isTemp && markers[e.id]){
-        map.removeLayer(markers[e.id]);
-      }
-      const m = L.marker([e.coordinates.lat,e.coordinates.lng],{icon:createIcon(isTemp)})
-        .addTo(map)
-        .bindPopup(`
-          <div class="popup-content">
-            <div class="popup-header">
-              <span class="close-popup">&times;</span>
-              <h4>${e.food}</h4>
-            </div>
-            <div class="popup-body">
-              <p>${e.location}</p>
-              <p>כמות: ${e.amount}</p>
-              <p style="font-size:.8rem;color:#6c757d;">נגמר בעוד: ${formatTime(e.expiresAt-Date.now())}</p>
-              ${e.imageUrl?`<img src="${e.imageUrl}" class="popup-image">`:''}
-            </div>
+    function addMarker(e,isTemp=false){
+      if(!isTemp && markers[e.id]) map.removeLayer(markers[e.id]);
+      const m = L.marker([e.coordinates.lat,e.coordinates.lng],{icon:createIcon(isTemp)}).addTo(map);
+      const canDelete = !isTemp && e.createdBy===currentUserId;
+      let html=`
+        <div class="popup-content">
+          <div class="popup-header">
+            <span class="close-popup">&times;</span>
+            <h4>${e.food}</h4>
           </div>
-        `);
-      m.getPopup().on('add', ()=>{
-        m.getPopup()._container.querySelector('.close-popup').onclick = ()=>m.closePopup();
+          <div class="popup-body">
+            <p>${e.location}</p>
+            <p>כמות: ${e.amount}</p>
+            <p style="font-size:.8rem;color:#6c757d;">
+              נגמר בעוד: ${formatTime(e.expiresAt-Date.now())}
+            </p>
+            ${e.imageUrl?`<img src="${e.imageUrl}" class="popup-image">`:''}
+          </div>
+          <div class="popup-footer">
+            ${canDelete?`<button class="delete-btn"><i class="fas fa-trash"></i> Delete</button>`:``}
+          </div>
+        </div>`;
+      m.bindPopup(html);
+      m.getPopup().on('add',()=>{
+        const c = m.getPopup()._container;
+        c.querySelector('.close-popup').onclick = ()=>m.closePopup();
+        if(canDelete){
+          c.querySelector('.delete-btn').onclick = async()=>{
+            if(!confirm('Delete this location?')) return;
+            await sb.from('food_locations').delete().eq('id',e.id);
+            m.closePopup();
+            map.removeLayer(m); delete markers[e.id];
+            foodLocations = foodLocations.filter(f=>f.id!==e.id);
+            renderList();
+          };
+        }
       });
       if(isTemp){
-        markers.temp = m;
-        m.isTemporary = true;
+        markers.temp=m; m.isTemporary=true;
       } else {
-        markers[e.id] = m;
+        markers[e.id]=m;
       }
     }
 
-    // Load initial published locations
     async function loadInitial(){
-      const now = Date.now();
-      let { data, error } = await sb.from('food_locations').select('*').gt('expiresAt',now);
+      let now=Date.now();
+      const { data, error } = await sb.from('food_locations').select('*').gt('expiresAt',now);
       if(error){ console.error(error); return; }
-      foodLocations = data;
+      foodLocations=data;
       foodLocations.forEach(e=>addMarker(e));
       renderList();
     }
 
-    // Supabase real-time: published entries only
     function setupRealtime(){
       sb.channel('public:food_locations')
-        .on('postgres_changes',{ event:'INSERT', schema:'public', table:'food_locations' }, payload=>{
-          if(payload.new.expiresAt > Date.now()){
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:'food_locations'},payload=>{
+          if(payload.new.expiresAt>Date.now()){
             foodLocations.push(payload.new);
             addMarker(payload.new);
             renderList();
           }
         })
-        .on('postgres_changes',{ event:'UPDATE', schema:'public', table:'food_locations' }, payload=>{
-          if(payload.new.expiresAt > Date.now()){
-            foodLocations = foodLocations.map(f=>f.id===payload.new.id?payload.new:f);
+        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'food_locations'},payload=>{
+          if(payload.new.expiresAt>Date.now()){
+            foodLocations=foodLocations.map(f=>f.id===payload.new.id?payload.new:f);
             addMarker(payload.new);
           } else {
-            foodLocations = foodLocations.filter(f=>f.id!==payload.new.id);
-            map.removeLayer(markers[payload.new.id]);delete markers[payload.new.id];
+            foodLocations=foodLocations.filter(f=>f.id!==payload.new.id);
+            map.removeLayer(markers[payload.new.id]); delete markers[payload.new.id];
           }
           renderList();
         })
-        .on('postgres_changes',{ event:'DELETE', schema:'public', table:'food_locations' }, payload=>{
-          foodLocations = foodLocations.filter(f=>f.id!==payload.old.id);
+        .on('postgres_changes',{event:'DELETE',schema:'public',table:'food_locations'},payload=>{
+          foodLocations=foodLocations.filter(f=>f.id!==payload.old.id);
           map.removeLayer(markers[payload.old.id]); delete markers[payload.old.id];
           renderList();
         })
         .subscribe();
     }
 
-    // Reverse-geocode to fill address input
     async function reverseGeocode(lat,lng){
       els.loading.style.display='inline-block';
       try{
-        let res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-        let js = await res.json();
-        els.location.value = js.display_name || `${lat.toFixed(5)},${lng.toFixed(5)}`;
+        let r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        let j=await r.json();
+        els.location.value=j.display_name||`${lat.toFixed(5)},${lng.toFixed(5)}`;
       }catch{
-        els.location.value = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+        els.location.value=`${lat.toFixed(5)},${lng.toFixed(5)}`;
       }
       els.loading.style.display='none';
     }
 
-    // Upload image to Supabase storage
     async function uploadImage(file,id){
-      if(!file) return null;
-      if(!file.type.startsWith("image/")){
-        alert("The file provided is not an image."); return null;
-      }
-      const ext = file.name.split('.').pop();
-      const name = `${id}_${Date.now()}_${Math.random().toString(36).substr(2,5)}.${ext}`;
+      if(!file||!file.type.startsWith("image/")){alert('Not an image');return null;}
+      const ext=file.name.split('.').pop();
+      const name=`${id}_${Date.now()}_${Math.random().toString(36).substr(2,5)}.${ext}`;
       let { error } = await sb.storage.from('food_images').upload(name,file,{cacheControl:'3600',upsert:false});
-      if(error){console.error(error);alert("Error uploading image.");return null;}
+      if(error){console.error(error);alert('Upload failed');return null;}
       let { data:pub } = sb.storage.from('food_images').getPublicUrl(name);
       return pub.publicUrl;
     }
 
-    // Add new entry (only if logged in)
-    async function addNewEntry(){
-      const loc = els.location.value.trim(),
-            food=els.food.value.trim(),
-            phone=els.phone.value.trim(),
-            amt = els.amount.value.trim();
-      if(!loc||!food||!phone||!amt){ alert('Please fill all fields!'); return; }
-      if(!selectedCoordinates){ alert('Please select on map or type address.'); return; }
-      const now = Date.now();
-      let imageUrl = null;
-      if(selectedImage) imageUrl = await uploadImage(selectedImage,now.toString());
-      const entry = {
-        location: loc, food, phone,
-        amount: parseInt(amt),
-        coordinates:{lat:selectedCoordinates[0],lng:selectedCoordinates[1]},
-        timestamp:now,
-        expiresAt:now+24*3600000,
-        imageUrl,
-        createdBy:currentUserId
-      };
-      let { error } = await sb.from('food_locations').insert([entry]);
-      if(error){ console.error(error); alert("Insert failed."); return; }
-      // reset
-      els.location.value=''; els.food.value=''; els.phone.value=''; els.amount.value='1';
-      els.preview.style.display='none'; els.preview.src='';els.removeImg.style.display='none';
-      selectedCoordinates=null;
-      if(markers.temp){ map.removeLayer(markers.temp); delete markers.temp; }
-      els.cancel.style.display='none';
-    }
-
-    // Delete entry
-    async function deleteLocation(id){
-      let { error } = await sb.from('food_locations').delete().eq('id',id);
-      if(error){ console.error(error); alert("Delete failed."); }
-    }
-
-    // Initialize everything
     window.onload = async()=>{
       // session
       let { data:{session} } = await sb.auth.getSession();
-      currentUserId = session?.user?.id || null;
+      currentUserId = session?.user?.id||null;
 
       // map init
-      map = L.map('map',{ center:[31.7683,35.2137], zoom:8 });
+      map = L.map('map',{center:[31.7683,35.2137],zoom:8});
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-      // click-to-select
+      // map click => select
       map.on('click', e=>{
         if(markers.temp){ map.removeLayer(markers.temp); delete markers.temp; }
-        const {lat,lng} = e.latlng;
-        selectedCoordinates = [lat,lng];
+        const {lat,lng}=e.latlng;
+        selectedCoordinates=[lat,lng];
         reverseGeocode(lat,lng);
         const popup = L.DomUtil.create('div','popup-content');
         popup.innerHTML=`
@@ -400,30 +362,28 @@
             <span class="close-popup">&times;</span>
             <h4>מיקום נבחר</h4>
           </div>
-          <div class="popup-body">
-            <p>${lat.toFixed(5)}, ${lng.toFixed(5)}</p>
-          </div>`;
-        const m = L.marker([lat,lng],{icon:createIcon(true)}).addTo(map).bindPopup(popup).openPopup();
+          <div class="popup-body"><p>${lat.toFixed(5)}, ${lng.toFixed(5)}</p></div>`;
+        const m=L.marker([lat,lng],{icon:createIcon(true)}).addTo(map).bindPopup(popup).openPopup();
         m.isTemporary=true; markers.temp=m;
-        popup.querySelector('.close-popup').onclick = ()=>m.closePopup();
+        popup.querySelector('.close-popup').onclick=()=>m.closePopup();
         els.cancel.style.display='block';
       });
 
-      // load + realtime
+      // load & realtime
       await loadInitial();
       setupRealtime();
 
-      // expire cleanup every minute
+      // periodic expire
       setInterval(()=>{
         const now=Date.now();
-        foodLocations.filter(f=>f.expiresAt<=now).forEach(f=>deleteLocation(f.id));
+        foodLocations.filter(f=>f.expiresAt<=now).forEach(f=>sb.from('food_locations').delete().eq('id',f.id));
       },60000);
 
-      // image change
-      els.foodImage.onchange = function(){
+      // image preview
+      els.foodImage.onchange=function(){
         if(this.files[0]){
           selectedImage=this.files[0];
-          let r=new FileReader();
+          const r=new FileReader();
           r.onload=e=>{
             els.preview.src=e.target.result;
             els.preview.style.display='block';
@@ -432,43 +392,76 @@
           r.readAsDataURL(selectedImage);
         }
       };
-      els.removeImg.onclick = ()=>{
-        els.preview.style.display='none'; els.preview.src=''; els.removeImg.style.display='none'; selectedImage=null;
+      els.removeImg.onclick=()=>{
+        els.preview.style.display='none';
+        els.preview.src='';
+        els.removeImg.style.display='none';
+        selectedImage=null;
       };
 
-      // publish button (only if logged in)
+      // publish
       els.submit.onclick = ()=>{
         if(!currentUserId){
-          alert('You must be logged in to publish.');
-          window.location.href='login.html';
-          return;
+          alert('Login required');
+          return window.location.href='login.html';
         }
-        addNewEntry();
+        const loc=els.location.value.trim(),
+              food=els.food.value.trim(),
+              phone=els.phone.value.trim(),
+              amt=els.amount.value.trim();
+        if(!loc||!food||!phone||!amt){
+          return alert('Fill all fields');
+        }
+        if(!selectedCoordinates){
+          return alert('Select on map or type address');
+        }
+        (async()=>{
+          const now=Date.now();
+          let imageUrl=null;
+          if(selectedImage) imageUrl=await uploadImage(selectedImage,now.toString());
+          const entry={
+            location:loc,food,phone,
+            amount:parseInt(amt),
+            coordinates:{lat:selectedCoordinates[0],lng:selectedCoordinates[1]},
+            timestamp:now,
+            expiresAt:now+24*3600000,
+            imageUrl,
+            createdBy:currentUserId
+          };
+          let { error }=await sb.from('food_locations').insert([entry]);
+          if(error){console.error(error);return alert('Insert failed');}
+          // reset
+          els.location.value='';els.food.value='';els.phone.value='';els.amount.value='1';
+          els.preview.style.display='none';els.preview.src='';els.removeImg.style.display='none';
+          if(markers.temp){ map.removeLayer(markers.temp); delete markers.temp; }
+          els.cancel.style.display='none';
+        })();
       };
 
       // cancel
-      els.cancel.onclick = ()=>{
+      els.cancel.onclick=()=>{
         if(markers.temp){ map.removeLayer(markers.temp); delete markers.temp; }
         selectedCoordinates=null;
         els.location.value='';
         els.cancel.style.display='none';
       };
 
-      // toggle sidebar/map
-      els.toggle.onclick = ()=>{
-        const ml = document.querySelector('.main-layout');
+      // toggle
+      els.toggle.onclick=()=>{
+        const ml=document.querySelector('.main-layout');
         if(window.innerWidth>=768){
           ml.classList.toggle('collapse-sidebar');
         } else {
           ml.classList.toggle('map-view');
           setTimeout(()=>map.invalidateSize(),100);
         }
-        els.toggle.innerHTML = ml.classList.contains('collapse-sidebar') || ml.classList.contains('map-view')
-          ? '<i class="fas fa-arrow-left"></i>' : '<i class="fas fa-arrow-right"></i>';
+        els.toggle.innerHTML = ml.classList.contains('collapse-sidebar')||ml.classList.contains('map-view')
+          ? '<i class="fas fa-arrow-left"></i>'
+          : '<i class="fas fa-arrow-right"></i>';
       };
 
-      // hamburger popup
-      els.hbBtn.onclick = ()=>els.hbPopup.classList.add('open');
+      // hamburger
+      els.hbBtn.onclick  = ()=>els.hbPopup.classList.add('open');
       els.popClose.onclick = ()=>els.hbPopup.classList.remove('open');
       els.navMap.onclick = ()=>{
         els.navMap.classList.add('active');
