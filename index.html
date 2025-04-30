@@ -85,6 +85,7 @@
   </style>
 </head>
 <body>
+  <!-- Hamburger Popup -->
   <button id="hamburger-btn" class="hamburger-btn"><i class="fas fa-bars"></i></button>
   <div id="hamburger-popup" class="hamburger-popup">
     <button id="popup-close-btn" class="popup-close-btn"><i class="fas fa-times"></i></button>
@@ -178,49 +179,53 @@
     const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
     const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
 
-    let currentUserId=null, map, markers={}, foodLocations=[], selectedCoordinates=null, selectedImage=null;
+    let currentUserId = null,
+        map, markers = {}, foodLocations = [], selectedCoordinates = null, selectedImage = null;
 
-    const els={
-      location:document.getElementById('location'),
-      food:document.getElementById('food'),
-      phone:document.getElementById('phone'),
-      amount:document.getElementById('amount'),
-      loading:document.getElementById('loading-spinner'),
-      submit:document.getElementById('submit-btn'),
-      cancel:document.getElementById('cancel-btn'),
+    const els = {
+      location: document.getElementById('location'),
+      food:     document.getElementById('food'),
+      phone:    document.getElementById('phone'),
+      amount:   document.getElementById('amount'),
+      loading:  document.getElementById('loading-spinner'),
+      submit:   document.getElementById('submit-btn'),
+      cancel:   document.getElementById('cancel-btn'),
       foodImage:document.getElementById('food-image'),
-      preview:document.getElementById('image-preview'),
+      preview:  document.getElementById('image-preview'),
       removeImg:document.getElementById('remove-image'),
-      list:document.getElementById('food-list'),
-      count:document.getElementById('entries-count'),
-      empty:document.getElementById('empty-state'),
-      toggle:document.getElementById('toggle-map-btn'),
-      hbBtn:document.getElementById('hamburger-btn'),
-      hbPopup:document.getElementById('hamburger-popup'),
-      popClose:document.getElementById('popup-close-btn'),
-      navMap:document.getElementById('nav-map'),
-      navAbout:document.getElementById('nav-about'),
-      pageMap:document.getElementById('popup-page-map'),
+      list:     document.getElementById('food-list'),
+      count:    document.getElementById('entries-count'),
+      empty:    document.getElementById('empty-state'),
+      toggle:   document.getElementById('toggle-map-btn'),
+      hbBtn:    document.getElementById('hamburger-btn'),
+      hbPopup:  document.getElementById('hamburger-popup'),
+      popClose: document.getElementById('popup-close-btn'),
+      navMap:   document.getElementById('nav-map'),
+      navAbout: document.getElementById('nav-about'),
+      pageMap:  document.getElementById('popup-page-map'),
       pageAbout:document.getElementById('popup-page-about')
     };
 
-    const formatTime=ms=>{
-      const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000);
+    const formatTime = ms => {
+      const h = Math.floor(ms/3600000),
+            m = Math.floor((ms%3600000)/60000);
       return `${h}h ${m}m`;
     };
 
-    const createIcon=temp=>L.divIcon({
-      className:'custom-marker'+(temp?' marker-temp':''),
-      html:`<i class="fas fa-${temp?'crosshairs':'utensils'}"></i>`,
-      iconSize:[48,48],iconAnchor:[24,24]
+    // Marker icon factory
+    const createIcon = isTemp => L.divIcon({
+      className: 'custom-marker' + (isTemp?' marker-temp':''),
+      html: `<i class="fas fa-${isTemp?'crosshairs':'utensils'}"></i>`,
+      iconSize:[48,48], iconAnchor:[24,24]
     });
 
+    // Render sidebar list
     function renderList(){
-      els.list.innerHTML='';
-      els.count.textContent=foodLocations.length;
-      els.empty.style.display=foodLocations.length?'none':'flex';
+      els.list.innerHTML = '';
+      els.count.textContent = foodLocations.length;
+      els.empty.style.display = foodLocations.length?'none':'flex';
       foodLocations.sort((a,b)=>b.timestamp-a.timestamp).forEach(e=>{
-        const li=document.createElement('li');
+        const li = document.createElement('li');
         li.className='food-item';
         li.innerHTML=`
           <div>
@@ -232,14 +237,20 @@
             <span class="food-amount">${e.amount}</span>
             ${e.imageUrl?`<img src="${e.imageUrl}" class="food-image-thumbnail">`:''}
           </div>`;
-        li.onclick=()=>{map.setView([e.coordinates.lat,e.coordinates.lng],15);markers[e.id]?.openPopup();};
+        li.onclick=()=>{
+          map.setView([e.coordinates.lat,e.coordinates.lng],15);
+          markers[e.id]?.openPopup();
+        };
         els.list.appendChild(li);
       });
     }
 
-    function addMarker(e,temp=false){
-      if(!temp&&markers[e.id])map.removeLayer(markers[e.id]);
-      const m=L.marker([e.coordinates.lat,e.coordinates.lng],{icon:createIcon(temp)})
+    // Add a marker for published entries
+    function addMarker(e, isTemp=false){
+      if(!isTemp && markers[e.id]){
+        map.removeLayer(markers[e.id]);
+      }
+      const m = L.marker([e.coordinates.lat,e.coordinates.lng],{icon:createIcon(isTemp)})
         .addTo(map)
         .bindPopup(`
           <div class="popup-content">
@@ -253,128 +264,223 @@
               <p style="font-size:.8rem;color:#6c757d;">נגמר בעוד: ${formatTime(e.expiresAt-Date.now())}</p>
               ${e.imageUrl?`<img src="${e.imageUrl}" class="popup-image">`:''}
             </div>
-          </div>`);
-      m.getPopup().on('add',()=>m.getPopup()._container.querySelector('.close-popup').onclick=()=>m.closePopup());
-      if(temp)markers.temp=m;else markers[e.id]=m;
+          </div>
+        `);
+      m.getPopup().on('add', ()=>{
+        m.getPopup()._container.querySelector('.close-popup').onclick = ()=>m.closePopup();
+      });
+      if(isTemp){
+        markers.temp = m;
+        m.isTemporary = true;
+      } else {
+        markers[e.id] = m;
+      }
     }
 
+    // Load initial published locations
     async function loadInitial(){
-      const now=Date.now();
-      const{data,error}=await sb.from('food_locations').select('*').gt('expiresAt',now);
-      if(error){console.error(error);return;}
-      foodLocations=data;
+      const now = Date.now();
+      let { data, error } = await sb.from('food_locations').select('*').gt('expiresAt',now);
+      if(error){ console.error(error); return; }
+      foodLocations = data;
       foodLocations.forEach(e=>addMarker(e));
       renderList();
     }
 
-    function onInsert({new:e}){if(e.expiresAt>Date.now()){foodLocations.push(e);addMarker(e);renderList();}}
-    function onUpdate({new:e}){
-      if(e.expiresAt<=Date.now()){foodLocations=foodLocations.filter(x=>x.id!==e.id);map.removeLayer(markers[e.id]);delete markers[e.id];}
-      else{foodLocations=foodLocations.map(x=>x.id===e.id?e:x);addMarker(e);}
-      renderList();
+    // Supabase real-time: published entries only
+    function setupRealtime(){
+      sb.channel('public:food_locations')
+        .on('postgres_changes',{ event:'INSERT', schema:'public', table:'food_locations' }, payload=>{
+          if(payload.new.expiresAt > Date.now()){
+            foodLocations.push(payload.new);
+            addMarker(payload.new);
+            renderList();
+          }
+        })
+        .on('postgres_changes',{ event:'UPDATE', schema:'public', table:'food_locations' }, payload=>{
+          if(payload.new.expiresAt > Date.now()){
+            foodLocations = foodLocations.map(f=>f.id===payload.new.id?payload.new:f);
+            addMarker(payload.new);
+          } else {
+            foodLocations = foodLocations.filter(f=>f.id!==payload.new.id);
+            map.removeLayer(markers[payload.new.id]);delete markers[payload.new.id];
+          }
+          renderList();
+        })
+        .on('postgres_changes',{ event:'DELETE', schema:'public', table:'food_locations' }, payload=>{
+          foodLocations = foodLocations.filter(f=>f.id!==payload.old.id);
+          map.removeLayer(markers[payload.old.id]); delete markers[payload.old.id];
+          renderList();
+        })
+        .subscribe();
     }
-    function onDelete({old:e}){foodLocations=foodLocations.filter(x=>x.id!==e.id);map.removeLayer(markers[e.id]);delete markers[e.id];renderList();}
 
-    function setupMapClick(){
-      map.on('click',async ev=>{
-        const{lat,lng}=ev.latlng;
-        els.loading.style.display='inline-block';
-        try{
-          const res=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-          const js=await res.json();
-          els.location.value=js.display_name||`${lat.toFixed(5)},${lng.toFixed(5)}`;
-        }catch{els.location.value=`${lat.toFixed(5)},${lng.toFixed(5)}`;}
-        els.loading.style.display='none';
-        if(markers.temp){map.removeLayer(markers.temp);delete markers.temp;}
-        addMarker({coordinates:{lat,lng},food:'',location:'',amount:0,expiresAt:Date.now()+1},true);
-        selectedCoordinates=[lat,lng];
+    // Reverse-geocode to fill address input
+    async function reverseGeocode(lat,lng){
+      els.loading.style.display='inline-block';
+      try{
+        let res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        let js = await res.json();
+        els.location.value = js.display_name || `${lat.toFixed(5)},${lng.toFixed(5)}`;
+      }catch{
+        els.location.value = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+      }
+      els.loading.style.display='none';
+    }
+
+    // Upload image to Supabase storage
+    async function uploadImage(file,id){
+      if(!file) return null;
+      if(!file.type.startsWith("image/")){
+        alert("The file provided is not an image."); return null;
+      }
+      const ext = file.name.split('.').pop();
+      const name = `${id}_${Date.now()}_${Math.random().toString(36).substr(2,5)}.${ext}`;
+      let { error } = await sb.storage.from('food_images').upload(name,file,{cacheControl:'3600',upsert:false});
+      if(error){console.error(error);alert("Error uploading image.");return null;}
+      let { data:pub } = sb.storage.from('food_images').getPublicUrl(name);
+      return pub.publicUrl;
+    }
+
+    // Add new entry (only if logged in)
+    async function addNewEntry(){
+      const loc = els.location.value.trim(),
+            food=els.food.value.trim(),
+            phone=els.phone.value.trim(),
+            amt = els.amount.value.trim();
+      if(!loc||!food||!phone||!amt){ alert('Please fill all fields!'); return; }
+      if(!selectedCoordinates){ alert('Please select on map or type address.'); return; }
+      const now = Date.now();
+      let imageUrl = null;
+      if(selectedImage) imageUrl = await uploadImage(selectedImage,now.toString());
+      const entry = {
+        location: loc, food, phone,
+        amount: parseInt(amt),
+        coordinates:{lat:selectedCoordinates[0],lng:selectedCoordinates[1]},
+        timestamp:now,
+        expiresAt:now+24*3600000,
+        imageUrl,
+        createdBy:currentUserId
+      };
+      let { error } = await sb.from('food_locations').insert([entry]);
+      if(error){ console.error(error); alert("Insert failed."); return; }
+      // reset
+      els.location.value=''; els.food.value=''; els.phone.value=''; els.amount.value='1';
+      els.preview.style.display='none'; els.preview.src='';els.removeImg.style.display='none';
+      selectedCoordinates=null;
+      if(markers.temp){ map.removeLayer(markers.temp); delete markers.temp; }
+      els.cancel.style.display='none';
+    }
+
+    // Delete entry
+    async function deleteLocation(id){
+      let { error } = await sb.from('food_locations').delete().eq('id',id);
+      if(error){ console.error(error); alert("Delete failed."); }
+    }
+
+    // Initialize everything
+    window.onload = async()=>{
+      // session
+      let { data:{session} } = await sb.auth.getSession();
+      currentUserId = session?.user?.id || null;
+
+      // map init
+      map = L.map('map',{ center:[31.7683,35.2137], zoom:8 });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+      // click-to-select
+      map.on('click', e=>{
+        if(markers.temp){ map.removeLayer(markers.temp); delete markers.temp; }
+        const {lat,lng} = e.latlng;
+        selectedCoordinates = [lat,lng];
+        reverseGeocode(lat,lng);
+        const popup = L.DomUtil.create('div','popup-content');
+        popup.innerHTML=`
+          <div class="popup-header">
+            <span class="close-popup">&times;</span>
+            <h4>מיקום נבחר</h4>
+          </div>
+          <div class="popup-body">
+            <p>${lat.toFixed(5)}, ${lng.toFixed(5)}</p>
+          </div>`;
+        const m = L.marker([lat,lng],{icon:createIcon(true)}).addTo(map).bindPopup(popup).openPopup();
+        m.isTemporary=true; markers.temp=m;
+        popup.querySelector('.close-popup').onclick = ()=>m.closePopup();
         els.cancel.style.display='block';
       });
-    }
 
-    async function uploadImage(file,id){
-      if(!file)return null;
-      if(!file.type.startsWith("image/")){alert("The file provided is not an image.");return null;}
-      try{
-        const ext=file.name.split('.').pop();
-        const name=`${id}_${Date.now()}_${Math.random().toString(36).substr(2,5)}.${ext}`;
-        const{data,error}=await sb.storage.from('food_images').upload(name,file,{cacheControl:'3600',upsert:false});
-        if(error){console.error(error);alert("Error uploading image.");return null;}
-        const{data:pubData,error:pubErr}=sb.storage.from('food_images').getPublicUrl(name);
-        if(pubErr){console.error(pubErr);alert("Error getting image URL.");return null;}
-        return pubData.publicUrl;
-      }catch(e){console.error(e);alert("Error uploading image.");return null;}
-    }
-
-    async function addNewFoodEntry(){
-      const loc=els.location.value.trim(),food=els.food.value.trim(),phone=els.phone.value.trim(),amt=els.amount.value.trim();
-      if(!loc||!food||!phone||!amt){alert('Please fill in all fields!');return;}
-      if(!selectedCoordinates){alert('Please select a location on the map or type the full address.');return;}
-      const now=Date.now();
-      try{
-        let imageUrl=null;
-        if(selectedImage)imageUrl=await uploadImage(selectedImage,now.toString());
-        const entry={location:loc,food,phone,amount:parseInt(amt),coordinates:{lat:selectedCoordinates[0],lng:selectedCoordinates[1]},timestamp:now,expiresAt:now+24*60*60*1000,imageUrl,createdBy:currentUserId};
-        const{error}=await sb.from('food_locations').insert([entry]);
-        if(error){console.error(error);throw error;}
-        els.location.value='';els.food.value='';els.phone.value='';els.amount.value='1';
-        els.preview.style.display='none';els.preview.src='';els.removeImg.style.display='none';selectedImage=null;
-        selectedCoordinates=null;if(markers.temp){map.removeLayer(markers.temp);delete markers.temp;}
-        els.cancel.style.display='none';
-      }catch(e){console.error(e);alert("Error adding food location. Please try again.");}
-    }
-
-    async function deleteFoodLocation(id){
-      try{
-        const{error}=await sb.from('food_locations').delete().eq('id',id);
-        if(error)throw error;
-      }catch(e){console.error(e);alert("Error deleting food location.");}
-    }
-
-    window.onload=async()=>{
-      const{data:{session}}=await sb.auth.getSession();
-      currentUserId=session?.user?.id||null;
-      map=L.map('map',{center:[31.7683,35.2137],zoom:8});
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-      setupMapClick();
+      // load + realtime
       await loadInitial();
-      sb.channel('public:food_locations')
-        .on('postgres_changes',{event:'INSERT',schema:'public',table:'food_locations'},onInsert)
-        .on('postgres_changes',{event:'UPDATE',schema:'public',table:'food_locations'},onUpdate)
-        .on('postgres_changes',{event:'DELETE',schema:'public',table:'food_locations'},onDelete)
-        .subscribe();
-      setInterval(()=>foodLocations.filter(e=>e.expiresAt<=Date.now()).forEach(e=>onDelete({old:e})),60000);
-      els.foodImage.addEventListener('change',function(){
-        if(this.files&&this.files[0]){
+      setupRealtime();
+
+      // expire cleanup every minute
+      setInterval(()=>{
+        const now=Date.now();
+        foodLocations.filter(f=>f.expiresAt<=now).forEach(f=>deleteLocation(f.id));
+      },60000);
+
+      // image change
+      els.foodImage.onchange = function(){
+        if(this.files[0]){
           selectedImage=this.files[0];
-          const r=new FileReader();
-          r.onload=e=>{els.preview.src=e.target.result;els.preview.style.display='block';els.removeImg.style.display='block';};
+          let r=new FileReader();
+          r.onload=e=>{
+            els.preview.src=e.target.result;
+            els.preview.style.display='block';
+            els.removeImg.style.display='block';
+          };
           r.readAsDataURL(selectedImage);
         }
-      });
-      els.removeImg.addEventListener('click',()=>{els.preview.style.display='none';els.preview.src='';els.removeImg.style.display='none';selectedImage=null;});
-      els.submit.addEventListener('click',()=>{if(!currentUserId){window.location.href='login.html';return;}addNewFoodEntry();});
-      els.cancel.addEventListener('click',()=>{if(markers.temp){map.removeLayer(markers.temp);delete markers.temp;}selectedCoordinates=null;els.location.value='';els.cancel.style.display='none';});
-      els.toggle.addEventListener('click',()=>{
-        const ml=document.querySelector('.main-layout');
+      };
+      els.removeImg.onclick = ()=>{
+        els.preview.style.display='none'; els.preview.src=''; els.removeImg.style.display='none'; selectedImage=null;
+      };
+
+      // publish button (only if logged in)
+      els.submit.onclick = ()=>{
+        if(!currentUserId){
+          alert('You must be logged in to publish.');
+          window.location.href='login.html';
+          return;
+        }
+        addNewEntry();
+      };
+
+      // cancel
+      els.cancel.onclick = ()=>{
+        if(markers.temp){ map.removeLayer(markers.temp); delete markers.temp; }
+        selectedCoordinates=null;
+        els.location.value='';
+        els.cancel.style.display='none';
+      };
+
+      // toggle sidebar/map
+      els.toggle.onclick = ()=>{
+        const ml = document.querySelector('.main-layout');
         if(window.innerWidth>=768){
           ml.classList.toggle('collapse-sidebar');
-          els.toggle.innerHTML=ml.classList.contains('collapse-sidebar')?'<i class="fas fa-arrow-left"></i>':'<i class="fas fa-arrow-right"></i>';
-        }else{
+        } else {
           ml.classList.toggle('map-view');
-          els.toggle.innerHTML=ml.classList.contains('map-view')?'<i class="fas fa-arrow-left"></i>':'<i class="fas fa-arrow-right"></i>';
           setTimeout(()=>map.invalidateSize(),100);
         }
-      });
-      els.hbBtn.onclick=()=>els.hbPopup.classList.add('open');
-      els.popClose.onclick=()=>els.hbPopup.classList.remove('open');
-      els.navMap.onclick=()=>{
-        els.navMap.classList.add('active');els.navAbout.classList.remove('active');
-        els.pageMap.classList.add('active');els.pageAbout.classList.remove('active');
+        els.toggle.innerHTML = ml.classList.contains('collapse-sidebar') || ml.classList.contains('map-view')
+          ? '<i class="fas fa-arrow-left"></i>' : '<i class="fas fa-arrow-right"></i>';
       };
-      els.navAbout.onclick=()=>{
-        els.navAbout.classList.add('active');els.navMap.classList.remove('active');
-        els.pageAbout.classList.add('active');els.pageMap.classList.remove('active');
+
+      // hamburger popup
+      els.hbBtn.onclick = ()=>els.hbPopup.classList.add('open');
+      els.popClose.onclick = ()=>els.hbPopup.classList.remove('open');
+      els.navMap.onclick = ()=>{
+        els.navMap.classList.add('active');
+        els.navAbout.classList.remove('active');
+        els.pageMap.classList.add('active');
+        els.pageAbout.classList.remove('active');
+      };
+      els.navAbout.onclick = ()=>{
+        els.navAbout.classList.add('active');
+        els.navMap.classList.remove('active');
+        els.pageAbout.classList.add('active');
+        els.pageMap.classList.remove('active');
       };
     };
   </script>
