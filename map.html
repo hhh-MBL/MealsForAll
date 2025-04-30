@@ -28,6 +28,17 @@
       height: 48px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     }
+    .empty-state {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255,255,255,0.8);
+      padding: 1rem 2rem;
+      border-radius: .5rem;
+      font-size: 1.2rem;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -37,14 +48,14 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Replace with your complete Supabase API key
+    // Replace with your Supabase credentials
     const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
     const sb = supabase.createClient(supabaseUrl, supabaseKey);
     
-    let map, markers = {}, foodLocations = [];
+    let map, markers = {};
     
-    // Create marker icon using the main page map style (utensils icon)
+    // create the same custom icon you use on index.html
     const createMarkerIcon = () => L.divIcon({
       className: 'custom-marker',
       html: `<i class="fas fa-utensils"></i>`,
@@ -52,12 +63,17 @@
       iconAnchor: [24, 24]
     });
     
-    // Add a marker for each food location entry
     function addMarkerForLocation(entry) {
-      const marker = L.marker([entry.coordinates.lat, entry.coordinates.lng], { icon: createMarkerIcon() }).addTo(map);
-      markers[entry.id] = marker;
+      const marker = L.marker(
+        [entry.coordinates.lat, entry.coordinates.lng], 
+        { icon: createMarkerIcon() }
+      ).addTo(map);
       
-      const timeRemaining = Math.floor((entry.expiresAt - Date.now()) / 3600000) + 'h';
+      const msLeft = entry.expiresAt - Date.now();
+      const hours = Math.floor(msLeft / (1000 * 60 * 60));
+      const minutes = Math.floor((msLeft % (1000 * 60 * 60)) / (1000 * 60));
+      const timeRemaining = `${hours}h ${minutes}m`;
+      
       const popupContent = `
         <div>
           <h4>${entry.food}</h4>
@@ -67,25 +83,48 @@
         </div>
       `;
       marker.bindPopup(popupContent);
+      
+      markers[entry.id] = marker;
     }
     
-    // Fetch food locations from Supabase
+    // fetch, filter out expired, then add markers
     async function fetchFoodLocations() {
-      const { data, error } = await sb.from('food_locations').select('*');
+      const now = Date.now();
+      const { data, error } = await sb
+        .from('food_locations')
+        .select('*');
+      
       if (error) {
         console.error("Error fetching food locations:", error);
-        return;
+        return [];
       }
-      foodLocations = data;
-      foodLocations.forEach(addMarkerForLocation);
+      
+      // filter out expired entries
+      return data.filter(entry => entry.expiresAt > now);
     }
     
-    // Initialize the full-screen map on window load
     window.onload = async () => {
-      map = L.map('map', { center: [31.7683, 35.2137], zoom: 8 });
+      // init map
+      map = L.map('map', {
+        center: [31.7683, 35.2137],
+        zoom: 8
+      });
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-      await fetchFoodLocations();
-    }
+      
+      // load data
+      const validLocations = await fetchFoodLocations();
+      
+      if (validLocations.length === 0) {
+        // show empty state
+        const msg = document.createElement('div');
+        msg.classList.add('empty-state');
+        msg.innerText = 'אין נקודות מזון זמינות כרגע.';
+        document.body.appendChild(msg);
+        return;
+      }
+      
+      validLocations.forEach(addMarkerForLocation);
+    };
   </script>
 </body>
 </html>
