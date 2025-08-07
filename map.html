@@ -32,7 +32,12 @@
       // Initialize your client (be sure to paste your full key)
       const SUPA_URL = 'https://dieltjdqgeppyixximwe.supabase.co';
       const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
-      const sb = createClient(SUPA_URL, SUPA_KEY);
+      const sb = createClient(SUPA_URL, SUPA_KEY, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false
+        }
+      });
 
       // Set up the map
       const map = L.map('map', { center:[31.7683,35.2137], zoom:8 });
