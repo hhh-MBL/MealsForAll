@@ -171,9 +171,17 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const SUPA_URL = 'https://dieltjdqgeppyixximwe.supabase.co';
-    const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
-    const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+    const SUPA_URL = '';
+    const SUPA_KEY = '';
+    const sb = SUPA_URL && SUPA_KEY ? supabase.createClient(SUPA_URL, SUPA_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    }) : null;
+    if(!sb){
+      console.warn('Supabase not configured; backend features disabled.');
+    }
 
     let currentUserId = null,
         map, markers = {}, foodLocations = [], selectedCoordinates = null, selectedImage = null;
@@ -268,6 +276,7 @@
         if(canDelete){
           c.querySelector('.delete-btn').onclick = async()=>{
             if(!confirm('Delete this location?')) return;
+            if(!sb){ alert('Backend disabled'); return; }
             await sb.from('food_locations').delete().eq('id',e.id);
             m.closePopup();
             map.removeLayer(m); delete markers[e.id];
@@ -284,6 +293,7 @@
     }
 
     async function loadInitial(){
+      if(!sb) return;
       let now=Date.now();
       const { data, error } = await sb.from('food_locations').select('*').gt('expiresAt',now);
       if(error){ console.error(error); return; }
@@ -293,6 +303,7 @@
     }
 
     function setupRealtime(){
+      if(!sb) return;
       sb.channel('public:food_locations')
         .on('postgres_changes',{event:'INSERT',schema:'public',table:'food_locations'},payload=>{
           if(payload.new.expiresAt>Date.now()){
@@ -333,6 +344,7 @@
 
     async function uploadImage(file,id){
       if(!file||!file.type.startsWith("image/")){alert('Not an image');return null;}
+      if(!sb){ alert('Backend disabled'); return null; }
       const ext=file.name.split('.').pop();
       const name=`${id}_${Date.now()}_${Math.random().toString(36).substr(2,5)}.${ext}`;
       let { error } = await sb.storage.from('food_images').upload(name,file,{cacheControl:'3600',upsert:false});
@@ -343,8 +355,10 @@
 
     window.onload = async()=>{
       // session
-      let { data:{session} } = await sb.auth.getSession();
-      currentUserId = session?.user?.id||null;
+      if(sb){
+        let { data:{session} } = await sb.auth.getSession();
+        currentUserId = session?.user?.id||null;
+      }
 
       // map init
       map = L.map('map',{center:[31.7683,35.2137],zoom:8});
@@ -375,6 +389,7 @@
 
       // periodic expire
       setInterval(()=>{
+        if(!sb) return;
         const now=Date.now();
         foodLocations.filter(f=>f.expiresAt<=now).forEach(f=>sb.from('food_locations').delete().eq('id',f.id));
       },60000);
@@ -405,6 +420,7 @@
           alert('Login required');
           return window.location.href='login.html';
         }
+        if(!sb){ return alert('Backend disabled'); }
         const loc=els.location.value.trim(),
               food=els.food.value.trim(),
               phone=els.phone.value.trim(),

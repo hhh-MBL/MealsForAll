@@ -24,15 +24,17 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Wait for the Supabase global to be available
     window.addEventListener('load', async () => {
-      // Grab the createClient function from the Supabase global
-      const { createClient } = window.supabase;    // <-- note capital "S"
-
-      // Initialize your client (be sure to paste your full key)
-      const SUPA_URL = 'https://dieltjdqgeppyixximwe.supabase.co';
-      const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
-      const sb = createClient(SUPA_URL, SUPA_KEY);
+      const { createClient } = window.supabase;
+      const SUPA_URL = '';
+      const SUPA_KEY = '';
+      const sb = SUPA_URL && SUPA_KEY ? createClient(SUPA_URL, SUPA_KEY, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false
+        }
+      }) : null;
+      if(!sb){ console.warn('Supabase not configured; displaying map without data.'); }
 
       // Set up the map
       const map = L.map('map', { center:[31.7683,35.2137], zoom:8 });
@@ -61,6 +63,7 @@
 
       // Fetch and render all non-expired locations
       async function fetchLocations() {
+        if(!sb) return;
         const now = Date.now();
         const { data, error } = await sb
           .from('food_locations')
@@ -77,23 +80,23 @@
       // Do it once on load
       await fetchLocations();
 
-      // Live‐sync on INSERT / DELETE / UPDATE
-      sb.channel('public:food_locations')
-        .on('postgres_changes', { event:'INSERT', schema:'public', table:'food_locations' }, payload => {
-          if (payload.new.expiresAt > Date.now()) {
-            addMarker(payload.new);
-          }
-        })
-        .on('postgres_changes', { event:'UPDATE', schema:'public', table:'food_locations' }, async payload => {
-          // Simplest: just refresh all
-          map.eachLayer(layer => layer instanceof L.Marker && map.removeLayer(layer));
-          await fetchLocations();
-        })
-        .on('postgres_changes', { event:'DELETE', schema:'public', table:'food_locations' }, async payload => {
-          map.eachLayer(layer => layer instanceof L.Marker && map.removeLayer(layer));
-          await fetchLocations();
-        })
-        .subscribe();
+      if(sb){
+        sb.channel('public:food_locations')
+          .on('postgres_changes', { event:'INSERT', schema:'public', table:'food_locations' }, payload => {
+            if (payload.new.expiresAt > Date.now()) {
+              addMarker(payload.new);
+            }
+          })
+          .on('postgres_changes', { event:'UPDATE', schema:'public', table:'food_locations' }, async payload => {
+            map.eachLayer(layer => layer instanceof L.Marker && map.removeLayer(layer));
+            await fetchLocations();
+          })
+          .on('postgres_changes', { event:'DELETE', schema:'public', table:'food_locations' }, async payload => {
+            map.eachLayer(layer => layer instanceof L.Marker && map.removeLayer(layer));
+            await fetchLocations();
+          })
+          .subscribe();
+      }
     });
   </script>
 </body>

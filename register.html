@@ -109,9 +109,15 @@
     </div>
   </div>
   <script>
-    const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
-    const sb = supabase.createClient(supabaseUrl, supabaseKey);
+    const SUPA_URL = '';
+    const SUPA_KEY = '';
+    const sb = SUPA_URL && SUPA_KEY ? supabase.createClient(SUPA_URL, SUPA_KEY, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    }) : null;
+    if(!sb){ console.warn('Supabase not configured; registration disabled.'); }
     
     const registerBtn = document.getElementById('register-btn');
     const errorMsg = document.getElementById('error-message');
@@ -121,13 +127,17 @@
     registerBtn.addEventListener('click', async () => {
       errorMsg.textContent = '';
       successMsg.style.display = 'none';
+      if(!sb){
+        errorMsg.textContent = 'Backend not configured.';
+        return;
+      }
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value.trim();
       if (!email || !password) {
         errorMsg.textContent = 'אנא מלא אימייל וסיסמה.';
         return;
       }
-      const { data, error } = await sb.auth.signUp({ email, password });
+      const { error } = await sb.auth.signUp({ email, password });
       if (error) {
         if (error.message.toLowerCase().includes("duplicate") ||
             error.message.toLowerCase().includes("already registered")) {
@@ -136,7 +146,6 @@
           errorMsg.textContent = 'Registration error: ' + error.message;
         }
       } else {
-        // Instead of auto login, show a confirmation message.
         formContainer.style.display = 'none';
         successMsg.style.display = 'block';
         successMsg.textContent = 'A confirmation email has been sent. Please check your email and confirm your account before logging in.';
