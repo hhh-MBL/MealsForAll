@@ -201,10 +201,10 @@
     (async()=>{
       const { data: { session } } = await sb.auth.getSession();
       if (session?.user) {
-        els.authBanner.style.display = 'block';
-        els.authBanner.innerHTML = 'You are already logged in. <a href="index.html">Go to Home</a>';
-        els.logoutBtn.style.display = 'block';
-        // Optional: disable inputs to avoid confusion
+        // els.authBanner.style.display = 'block';
+        // els.authBanner.innerHTML = 'You are already logged in. <a href="index.html">Go to Home</a>';
+        // els.logoutBtn.style.display = 'block';
+        // // Optional: disable inputs to avoid confusion
         els.emailEl.disabled = true;
         els.passEl.disabled = true;
         els.logoutBtn.onclick = async () => { await sb.auth.signOut(); location.reload(); };
