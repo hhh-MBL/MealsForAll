@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"/>
 
   <style>
-    /* Same token set as index/login */
+    /* Same tokens as index/login */
     :root{
       --surface:#ffffff; --surface-2:#f6f7fb; --text:#111416; --text-dim:#636b75;
       --primary:#4361ee; --primary-600:#334acc; --muted:#e5e9f2; --danger:#ef233c;
@@ -110,6 +110,10 @@
         <button id="register-btn" class="btn btn-primary">הרשם</button>
       </div>
 
+      <!-- Session banner + logout (only shown when already logged in) -->
+      <div id="auth-banner" class="links" style="display:none;margin-top:8px;"></div>
+      <button id="logout-btn" class="btn" style="display:none;margin-top:8px;">Logout</button>
+
       <div class="links">
         <a href="login.html">כבר רשום? התחבר</a> ·
         <a href="index.html">חזרה לעמוד הראשי</a>
@@ -140,9 +144,9 @@
     (function(){
       try {
         const saved = localStorage.getItem('mfa-theme');
+        const t = document.getElementById('theme-toggle');
         if(saved === 'dark'){
           document.body.classList.add('dark');
-          const t = document.getElementById('theme-toggle');
           t.setAttribute('aria-pressed','true');
           t.innerHTML = '<i class="fa-solid fa-sun"></i>';
         }
@@ -159,7 +163,9 @@
       errorMsg: document.getElementById('error-message'),
       successMsg: document.getElementById('success-message'),
       form: document.getElementById('form-container'),
-      registerBtn: document.getElementById('register-btn')
+      registerBtn: document.getElementById('register-btn'),
+      authBanner: document.getElementById('auth-banner'),
+      logoutBtn: document.getElementById('logout-btn'),
     };
     function setSheet(open){
       els.sheet.classList.toggle('open', open);
@@ -186,10 +192,16 @@
       { auth: { persistSession: true, autoRefreshToken: true } }
     );
 
-    // If already logged in, bounce to home
+    // If already logged in: show banner, hide form (no redirect)
     (async()=>{
       const { data: { session } } = await sb.auth.getSession();
-      if(session?.user) window.location.href = 'index.html';
+      if (session?.user) {
+        els.authBanner.style.display = 'block';
+        els.authBanner.innerHTML = 'You are already logged in. <a href="index.html">Go to Home</a>';
+        els.logoutBtn.style.display = 'block';
+        els.form.style.display = 'none';
+        els.logoutBtn.onclick = async () => { await sb.auth.signOut(); location.reload(); };
+      }
     })();
 
     // Register
@@ -208,7 +220,6 @@
         }
         return;
       }
-      // Success (email confirmation flow)
       els.form.style.display = 'none';
       els.successMsg.style.display = 'block';
       els.successMsg.textContent = 'A confirmation email has been sent. Please confirm your account before logging in.';
