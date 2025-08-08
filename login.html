@@ -207,6 +207,7 @@
         // // Optional: disable inputs to avoid confusion
         els.emailEl.disabled = true;
         els.passEl.disabled = true;
+        els.loginBtn.disabled = true;
         els.logoutBtn.onclick = async () => { await sb.auth.signOut(); location.reload(); };
       }
     })();
