@@ -196,8 +196,8 @@
     (async()=>{
       const { data: { session } } = await sb.auth.getSession();
       if (session?.user) {
-        // els.authBanner.style.display = 'block';
-        // els.authBanner.innerHTML = 'You are already logged in. <a href="index.html">Go to Home</a>';
+        els.authBanner.style.display = 'block';
+        els.authBanner.innerHTML = 'You are already logged in.;
         els.logoutBtn.style.display = 'block';
         els.form.style.display = 'none';
         els.logoutBtn.onclick = async () => { await sb.auth.signOut(); location.reload(); };
