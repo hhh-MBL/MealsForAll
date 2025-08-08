@@ -1,151 +1,217 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MealsForAll - הרשמה</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MealsForAll – הרשמה</title>
+
+  <!-- Font + Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300..900&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"/>
+
   <style>
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f8f9fa;
-      margin: 0;
-      padding: 0;
-      direction: rtl;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
+    /* Same token set as index/login */
+    :root{
+      --surface:#ffffff; --surface-2:#f6f7fb; --text:#111416; --text-dim:#636b75;
+      --primary:#4361ee; --primary-600:#334acc; --muted:#e5e9f2; --danger:#ef233c;
+      --radius:14px; --radius-sm:10px; --shadow-1:0 6px 20px rgba(0,0,0,.06); --shadow-2:0 10px 30px rgba(0,0,0,.08);
+      --ring:0 0 0 3px rgba(67,97,238,.25);
     }
-    .container {
-      background: #fff;
-      padding: 1.5rem;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      width: 90%;
-      max-width: 400px;
-      text-align: center;
+    .dark{
+      --surface:#10131a; --surface-2:#161a23; --text:#e9edf4; --text-dim:#a8b2c3;
+      --primary:#7aa2ff; --primary-600:#5f86f0; --muted:#253044; --danger:#ff5b73;
+      --shadow-1:0 6px 24px rgba(0,0,0,.35); --shadow-2:0 10px 40px rgba(0,0,0,.45);
+      --ring:0 0 0 3px rgba(122,162,255,.25);
     }
-    h1, h2 {
-      color: #4361ee;
-      margin-bottom: 1rem;
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:'Heebo',ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial;
+      background:var(--surface-2); color:var(--text);
     }
-    .form-group {
-      margin-bottom: 1rem;
-      text-align: right;
+    a{color:var(--primary);text-decoration:none} a:hover{text-decoration:underline}
+
+    .topbar{position:sticky;top:0;z-index:1000;background:linear-gradient(180deg,rgba(0,0,0,.05),transparent),var(--surface-2);backdrop-filter:saturate(140%) blur(6px);padding:12px 16px;box-shadow:var(--shadow-1)}
+    .topbar-inner{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:12px}
+    .brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:1.25rem}
+    .chip{font-size:.85rem;padding:.3rem .6rem;border-radius:999px;background:color-mix(in oklab,var(--muted) 70%,transparent);color:var(--text-dim);border:1px solid var(--muted)}
+    .top-actions{margin-inline-start:auto;display:flex;align-items:center;gap:8px}
+    .btn-icon{border:1px solid var(--muted);background:var(--surface);color:var(--text);width:40px;height:40px;border-radius:999px;display:grid;place-items:center;cursor:pointer}
+    .btn-icon:focus-visible{outline:none;box-shadow:var(--ring)}
+
+    .app{max-width:900px;margin:0 auto;padding:16px}
+    .card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow-2);padding:20px}
+    .form-title{display:flex;align-items:center;gap:.6rem;font-weight:900;margin-bottom:12px}
+    .form-group{margin-bottom:14px}
+    label{display:block;margin-bottom:.35rem;font-weight:800}
+    .input-ico{position:relative}
+    .input-ico i{position:absolute;left:.85rem;top:50%;transform:translateY(-50%);color:var(--text-dim);pointer-events:none}
+    input[type="email"],input[type="password"]{
+      width:100%;border-radius:var(--radius-sm);border:1px solid var(--muted);background:var(--surface);color:var(--text);
+      padding:.75rem 1rem .75rem 2.2rem
     }
-    label {
-      display: block;
-      margin-bottom: 0.3rem;
-      font-weight: 600;
-    }
-    input[type="email"],
-    input[type="password"] {
-      width: 92%;
-      padding: 0.75rem;
-      border: 1px solid #dee2e6;
-      border-radius: 8px;
-      font-size: 1rem;
-      text-align: right;
-    }
-    button {
-      width: 100%;
-      padding: 0.75rem;
-      background: #4361ee;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      cursor: pointer;
-      font-weight: 600;
-      margin-top: 1rem;
-    }
-    .link {
-      margin-top: 1rem;
-      font-size: 0.9rem;
-    }
-    .link a {
-      color: #4361ee;
-      text-decoration: none;
-      font-weight: 600;
-      margin: 0 8px;
-    }
-    .error {
-      color: #e74c3c;
-      margin-bottom: 1rem;
-      text-align: center;
-      font-size: 0.95rem;
-    }
-    .success {
-      color: #2ecc71;
-      margin-bottom: 1rem;
-      text-align: center;
-      font-size: 1rem;
-    }
+    input:focus-visible{outline:none;border-color:var(--primary);box-shadow:var(--ring)}
+
+    .btn{border:1px solid var(--muted);border-radius:12px;padding:.85rem 1rem;font-weight:800;cursor:pointer;background:var(--surface-2);color:var(--text);width:100%}
+    .btn-primary{background:var(--primary);color:#fff;border-color:transparent}
+    .links{margin-top:10px;text-align:center}
+    .error{color:var(--danger);margin:.5rem 0;text-align:center}
+    .success{color:#2ecc71;margin:.5rem 0;text-align:center}
+
+    .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1099;opacity:0;pointer-events:none;transition:opacity .2s}
+    .backdrop.show{opacity:1;pointer-events:auto}
+    .sheet{position:fixed;top:0;right:-360px;width:360px;height:100%;background:var(--surface);box-shadow:-12px 0 40px rgba(0,0,0,.25);transition:right .28s;z-index:1100;display:flex;flex-direction:column}
+    .sheet.open{right:0}
+    .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--muted)}
+    .sheet-body{padding:16px;display:flex;flex-direction:column;gap:10px}
+    .sheet-body .btn{width:100%}
+
+    .dark .btn,.dark .btn-icon{background:var(--surface);color:var(--text);border-color:var(--muted)}
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>MealsForAll</h1>
-    <h2>הרשמה</h2>
-    <div id="error-message" class="error"></div>
-    <div id="success-message" class="success" style="display: none;"></div>
-    <!-- Separate the form fields in their own container -->
-    <div id="form-container">
-      <div class="form-group">
-        <label for="email">אימייל</label>
-        <input type="email" id="email" placeholder="name@example.com" />
-      </div>
-      <div class="form-group">
-        <label for="password">סיסמה</label>
-        <input type="password" id="password" placeholder="********" />
-      </div>
-      <button id="register-btn">הרשם</button>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <button id="hamburger-btn" class="btn-icon" aria-label="פתח תפריט"><i class="fas fa-bars"></i></button>
+      <div class="brand"><i class="fa-solid fa-bowl-food"></i> <span>MealsForAll</span> <span class="chip">beta</span></div>
+      <nav class="top-actions">
+        <a href="login.html" class="chip">Login</a>
+        <a href="index.html" class="chip">Home</a>
+        <button id="theme-toggle" class="btn-icon" aria-pressed="false" title="Theme"><i class="fa-solid fa-moon"></i></button>
+      </nav>
     </div>
-    <!-- Navigation links remain visible at all times -->
-    <div class="link">
-      <a href="login.html">כבר רשום? התחבר</a> | 
-      <a href="index.html">חזרה לעמוד הראשי</a>
-    </div>
-  </div>
-  <script>
-    const supabaseUrl = 'https://dieltjdqgeppyixximwe.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
-    const sb = supabase.createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false
-      }
-    });
-    
-    const registerBtn = document.getElementById('register-btn');
-    const errorMsg = document.getElementById('error-message');
-    const successMsg = document.getElementById('success-message');
-    const formContainer = document.getElementById('form-container');
+  </header>
 
-    registerBtn.addEventListener('click', async () => {
-      errorMsg.textContent = '';
-      successMsg.style.display = 'none';
+  <main class="app">
+    <div class="card" style="max-width:420px;margin-inline:auto;">
+      <div class="form-title"><i class="fa-solid fa-user-plus"></i><span>הרשמה</span></div>
+
+      <div id="error-message" class="error"></div>
+      <div id="success-message" class="success" style="display:none;"></div>
+
+      <div id="form-container">
+        <div class="form-group">
+          <label for="email">אימייל</label>
+          <div class="input-ico">
+            <i class="fa-solid fa-envelope"></i>
+            <input type="email" id="email" placeholder="name@example.com" autocomplete="username"/>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">סיסמה</label>
+          <div class="input-ico">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="password" placeholder="********" autocomplete="new-password"/>
+          </div>
+        </div>
+
+        <button id="register-btn" class="btn btn-primary">הרשם</button>
+      </div>
+
+      <div class="links">
+        <a href="login.html">כבר רשום? התחבר</a> ·
+        <a href="index.html">חזרה לעמוד הראשי</a>
+      </div>
+    </div>
+  </main>
+
+  <div id="backdrop" class="backdrop" hidden></div>
+  <aside id="sheet" class="sheet" aria-hidden="true">
+    <div class="sheet-head">
+      <strong>תפריט</strong>
+      <button id="sheet-close" class="btn-icon" aria-label="סגור"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sheet-body">
+      <a href="index.html" class="btn">Home</a>
+      <a href="map.html" class="btn btn-primary">Open Full Map</a>
+      <a href="about.html" class="btn">About</a>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <a href="login.html" class="btn" style="flex:1">Login</a>
+        <a href="register.html" class="btn" style="flex:1">Signup</a>
+      </div>
+    </div>
+  </aside>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Theme init
+    (function(){
+      try {
+        const saved = localStorage.getItem('mfa-theme');
+        if(saved === 'dark'){
+          document.body.classList.add('dark');
+          const t = document.getElementById('theme-toggle');
+          t.setAttribute('aria-pressed','true');
+          t.innerHTML = '<i class="fa-solid fa-sun"></i>';
+        }
+      } catch {}
+    })();
+
+    // Sheet controls
+    const els = {
+      hbBtn: document.getElementById('hamburger-btn'),
+      sheet: document.getElementById('sheet'),
+      close: document.getElementById('sheet-close'),
+      backdrop: document.getElementById('backdrop'),
+      themeToggle: document.getElementById('theme-toggle'),
+      errorMsg: document.getElementById('error-message'),
+      successMsg: document.getElementById('success-message'),
+      form: document.getElementById('form-container'),
+      registerBtn: document.getElementById('register-btn')
+    };
+    function setSheet(open){
+      els.sheet.classList.toggle('open', open);
+      els.sheet.setAttribute('aria-hidden', !open);
+      if(open){ els.backdrop.classList.add('show'); els.backdrop.removeAttribute('hidden'); }
+      else { els.backdrop.classList.remove('show'); setTimeout(()=> els.backdrop.setAttribute('hidden',''), 180); }
+    }
+    els.hbBtn.onclick = ()=> setSheet(true);
+    els.close.onclick = ()=> setSheet(false);
+    els.backdrop.onclick = ()=> setSheet(false);
+
+    // Theme toggle (persist)
+    els.themeToggle.onclick = () => {
+      const isDark = document.body.classList.toggle('dark');
+      els.themeToggle.setAttribute('aria-pressed', String(isDark));
+      els.themeToggle.innerHTML = isDark ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
+      try { localStorage.setItem('mfa-theme', isDark ? 'dark' : 'light'); } catch {}
+    };
+
+    // Supabase client (persist session)
+    const sb = supabase.createClient(
+      'https://dieltjdqgeppyixximwe.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw',
+      { auth: { persistSession: true, autoRefreshToken: true } }
+    );
+
+    // If already logged in, bounce to home
+    (async()=>{
+      const { data: { session } } = await sb.auth.getSession();
+      if(session?.user) window.location.href = 'index.html';
+    })();
+
+    // Register
+    els.registerBtn.addEventListener('click', async () => {
+      els.errorMsg.textContent = ''; els.successMsg.style.display = 'none';
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value.trim();
-      if (!email || !password) {
-        errorMsg.textContent = 'אנא מלא אימייל וסיסמה.';
+      if(!email || !password){ els.errorMsg.textContent = 'אנא מלא אימייל וסיסמה.'; return; }
+      const { error } = await sb.auth.signUp({ email, password });
+      if(error){
+        const msg = (error.message || '').toLowerCase();
+        if(msg.includes('duplicate') || msg.includes('already registered')){
+          els.errorMsg.textContent = 'An account using this email already exists.';
+        } else {
+          els.errorMsg.textContent = 'Registration error: ' + error.message;
+        }
         return;
       }
-      const { data, error } = await sb.auth.signUp({ email, password });
-      if (error) {
-        if (error.message.toLowerCase().includes("duplicate") ||
-            error.message.toLowerCase().includes("already registered")) {
-          errorMsg.textContent = 'An account using this email already exists.';
-        } else {
-          errorMsg.textContent = 'Registration error: ' + error.message;
-        }
-      } else {
-        // Instead of auto login, show a confirmation message.
-        formContainer.style.display = 'none';
-        successMsg.style.display = 'block';
-        successMsg.textContent = 'A confirmation email has been sent. Please check your email and confirm your account before logging in.';
-      }
+      // Success (email confirmation flow)
+      els.form.style.display = 'none';
+      els.successMsg.style.display = 'block';
+      els.successMsg.textContent = 'A confirmation email has been sent. Please confirm your account before logging in.';
     });
   </script>
 </body>
