@@ -4,670 +4,128 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MealsForAll</title>
-  <!-- External libs kept as-is (still one HTML file) -->
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300..800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"/>
   <style>
-    /*
-    =====================================================================
-    Design revamp (single-file):
-    - Color system with CSS variables
-    - Modern card layout, smooth spacing scale, consistent typography
-    - Better mobile behavior (map-first toggle, safe heights)
-    - Focus rings / a11y, reduced motion support
-    - Light/Dark theme + system preference
-    - Subtle animations, skeletons, and empty states
-    - No functional shortcuts; original features preserved
-    =====================================================================
-    */
-
     :root {
-      --bg: #0b0c10;           /* used in dark as fallback before switch */
-      --surface: #ffffff;
-      --surface-2: #f6f8fb;
-      --text: #101318;
-      --text-dim: #5c6672;
+      --surface-light: #ffffff;
+      --surface-dark: #1e1e1e;
+      --surface-2-light: #f5f6fa;
+      --surface-2-dark: #2a2a2a;
+      --text-light: #111;
+      --text-dark: #f1f1f1;
       --primary: #4361ee;
-      --primary-600: #3450d6;
+      --primary-hover: #334acc;
       --danger: #ef233c;
-      --muted: #e5e9f2;
-      --ring: 0 0 0 3px rgba(67, 97, 238, .25);
-      --radius: 14px;
-      --radius-sm: 10px;
-      --shadow-1: 0 6px 20px rgba(0,0,0,.06);
-      --shadow-2: 0 10px 30px rgba(0,0,0,.08);
-      --space-1: .25rem; /* 4px */
-      --space-2: .5rem;  /* 8px */
-      --space-3: .75rem; /* 12px */
-      --space-4: 1rem;   /* 16px */
-      --space-5: 1.25rem;/* 20px */
-      --space-6: 1.5rem; /* 24px */
+      --radius: 12px;
+      --shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
-
-    /* Dark theme */
-    :root[color-scheme="dark"] {
-      --surface: #0f1218;
-      --surface-2: #121723;
-      --text: #e9edf4;
-      --text-dim: #a8b2c3;
-      --primary: #7aa2ff;
-      --primary-600: #5f86f0;
-      --muted: #22293a;
-      --danger: #ff5b73;
-      --ring: 0 0 0 3px rgba(122,162,255,.25);
-      --shadow-1: 0 6px 24px rgba(0,0,0,.35);
-      --shadow-2: 0 10px 40px rgba(0,0,0,.45);
-    }
-
-    /* Respect OS preference on first load */
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme]) { color-scheme: dark; }
-      :root:not([data-theme]) { --surface: #0f1218; --surface-2: #121723; --text: #e9edf4; --text-dim:#a8b2c3; --primary:#7aa2ff; --primary-600:#5f86f0; --muted:#22293a; --danger:#ff5b73; --ring:0 0 0 3px rgba(122,162,255,.25); --shadow-1:0 6px 24px rgba(0,0,0,.35); --shadow-2:0 10px 40px rgba(0,0,0,.45); }
-    }
-
-    /* Base reset */
-    * { box-sizing:border-box; }
-    html, body { height:100%; }
     body {
-      margin:0;
-      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      background: var(--surface-2);
-      color: var(--text);
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+      margin: 0;
+      font-family: 'Assistant', sans-serif;
+      background: var(--surface-light);
+      color: var(--text-light);
+      transition: background 0.3s, color 0.3s;
     }
-
-    a { color: var(--primary); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    /* App shell */
-    .topbar {
-      position: sticky; top:0; z-index:1000;
-      background: linear-gradient(180deg, rgba(0,0,0,0.04), rgba(0,0,0,0)) , var(--surface-2);
-      backdrop-filter: saturate(140%) blur(6px);
-      padding: var(--space-3) var(--space-4);
-      box-shadow: var(--shadow-1);
+    body.dark {
+      background: var(--surface-dark);
+      color: var(--text-dark);
     }
-    .topbar-inner { max-width:1200px; margin:0 auto; display:flex; align-items:center; gap:var(--space-4); }
-    .brand { display:flex; align-items:center; gap:.6rem; font-weight:800; font-size:1.35rem; letter-spacing:.3px; }
-    .brand i { font-size:1.2rem; }
-    .top-actions { margin-inline-start:auto; display:flex; align-items:center; gap: var(--space-2); }
-
-    .chip { font-size:.85rem; padding:.35rem .65rem; border-radius:999px; background:var(--muted); color:var(--text-dim); }
-
-    .btn-icon { border:none; background:transparent; width:40px; height:40px; border-radius:999px; display:grid; place-items:center; cursor:pointer; }
-    .btn-icon:focus-visible { outline: none; box-shadow: var(--ring); }
-
-    .theme-toggle[aria-pressed="true"] i:before { content:"\f185"; } /* sun/moon swap */
-
-    .app { max-width:1200px; margin: 0 auto; padding: var(--space-4); }
-
-    /* Main grid */
-    .layout {
-      display:grid; gap: var(--space-4);
-      grid-template-columns: 1fr; /* mobile first */
-      min-height: calc(100vh - 90px);
+    header {
+      background: var(--primary);
+      color: #fff;
+      padding: 10px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    @media (min-width: 900px) {
-      .layout { grid-template-columns: 340px 1fr; }
+    header .brand {
+      font-weight: bold;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-
-    /* Card */
-    .card {
-      background: var(--surface);
+    .btn-icon {
+      border: 1px solid #ccc;
+      background: var(--surface-2-light);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      color: var(--text-light);
+    }
+    body.dark .btn-icon {
+      background: var(--surface-2-dark);
+      color: var(--text-dark);
+      border-color: #444;
+    }
+    .btn-icon:hover { filter: brightness(0.98); }
+    .btn-icon:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(67,97,238,0.25); }
+    nav.menu {
+      background: var(--surface-2-light);
+      box-shadow: var(--shadow);
       border-radius: var(--radius);
-      box-shadow: var(--shadow-2);
-      padding: var(--space-5);
+      padding: 15px;
+      margin: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: background 0.3s;
     }
-
-    /* Form */
-    .form-title { display:flex; align-items:center; gap:.6rem; margin-bottom: var(--space-4); font-size:1.1rem; font-weight:700; }
-    .form-group { margin-bottom: var(--space-4); }
-    label { display:block; margin-bottom: .4rem; font-weight:600; color: var(--text); }
-    .input-ico { position:relative; }
-    .input-ico i { position:absolute; left:.9rem; top:50%; transform:translateY(-50%); color: var(--text-dim); pointer-events:none; }
-    input[type="text"], input[type="number"] {
-      width:100%; border-radius: var(--radius-sm);
-      border:1px solid var(--muted);
-      background: var(--surface);
-      color: var(--text);
-      padding: .8rem 1rem .8rem 2.2rem;
-      transition: box-shadow .2s ease, border-color .2s ease;
+    body.dark nav.menu {
+      background: var(--surface-2-dark);
     }
-    input::placeholder { color: color-mix(in oklab, var(--text-dim) 60%, transparent); }
-    input:focus-visible { outline: none; border-color: var(--primary); box-shadow: var(--ring); }
-    input:disabled { opacity:.7; }
-
-    .row { display:flex; gap: var(--space-3); }
-    .row > * { flex:1; }
-
-    .upload {
-      display:flex; align-items:center; gap: var(--space-3);
+    nav.menu a {
+      text-decoration: none;
+      padding: 10px;
+      border-radius: var(--radius);
+      background: var(--primary);
+      color: #fff;
+      text-align: center;
+      font-weight: bold;
+      transition: background 0.3s;
     }
-    .upload-btn {
-      position:relative; overflow:hidden; border:1px dashed var(--muted);
-      border-radius: var(--radius-sm); padding: .65rem .9rem; background: var(--surface-2);
-      color: var(--text-dim); cursor:pointer; font-weight:600;
+    nav.menu a:hover {
+      background: var(--primary-hover);
     }
-    .upload-btn input { position:absolute; inset:0; opacity:0; cursor:pointer; }
-    .preview-wrap { position:relative; width:64px; height:64px; }
-    .preview-img { width:100%; height:100%; border-radius: 10px; object-fit: cover; display:none; box-shadow: var(--shadow-1); }
-    .remove-img { position:absolute; top:-8px; right:-8px; width:24px; height:24px; border-radius:999px; background: var(--danger); color:#fff; display:none; border:none; cursor:pointer; }
-
-    .actions { display:flex; gap: var(--space-3); }
-    .btn { border:none; border-radius: 12px; padding:.85rem 1rem; font-weight:700; cursor:pointer; transition: transform .05s ease, box-shadow .2s ease; }
-    .btn:active { transform: translateY(1px); }
-    .btn-primary { background: var(--primary); color:#fff; box-shadow: 0 6px 20px color-mix(in oklab, var(--primary) 30%, transparent); }
-    .btn-primary:hover { background: var(--primary-600); }
-    .btn-danger { background: var(--danger); color:#fff; }
-    .btn-ghost { background: transparent; border:1px solid var(--muted); color: var(--text); }
-
-    .hint { font-size:.85rem; color: var(--text-dim); margin-top: .35rem; }
-
-    /* List */
-    .list-wrap { margin-top: var(--space-5); }
-    .list-head { display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--space-3); }
-    .counter { background: var(--primary); color:#fff; font-size:.8rem; padding:.15rem .55rem; border-radius: 999px; min-width:28px; text-align:center; }
-
-    .list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap: .5rem; max-height: 280px; overflow:auto; }
-
-    .item { background: var(--surface-2); border-radius: 12px; padding:.7rem .8rem; display:flex; align-items:center; gap:.8rem; justify-content:space-between; cursor:pointer; border:1px solid transparent; transition: border-color .2s ease, background .2s ease; }
-    .item:hover { border-color: var(--muted); }
-
-    .item-main { min-width:0; }
-    .item-title { font-weight:800; }
-    .item-sub { font-size:.9rem; color: var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .item-meta { display:flex; align-items:center; gap:.5rem; }
-    .pill { font-size:.8rem; background: var(--primary); color:#fff; padding:.15rem .5rem; border-radius:999px; }
-    .thumb { width:44px; height:44px; border-radius:8px; object-fit:cover; box-shadow: var(--shadow-1); }
-
-    .empty { background: repeating-linear-gradient(45deg, color-mix(in oklab, var(--muted) 14%, transparent), color-mix(in oklab, var(--muted) 14%, transparent) 6px, transparent 6px, transparent 12px);
-             border:1px dashed var(--muted); border-radius:12px; padding: var(--space-5); text-align:center; color: var(--text-dim); }
-
-    /* Map */
-    #map-card { position:relative; overflow:hidden; }
-    #map { height: 100%; min-height: 360px; border-radius: calc(var(--radius) - 2px); }
-    .map-fab { position:absolute; inset-inline-start:12px; bottom:12px; display:flex; gap:8px; }
-
-    /* Toggle on small screens */
-    .view-toggle { position: fixed; right: 12px; bottom:12px; z-index:1050; }
-    .view-toggle .btn-icon { width:54px; height:54px; background:var(--primary); color:#fff; box-shadow: var(--shadow-2); }
-
-    @media (min-width:900px) { .view-toggle { display:none; } }
-
-    /* Hamburger panel (improved) */
-    .sheet { position: fixed; top:0; right:-360px; width:360px; height:100%; background: var(--surface); box-shadow: -12px 0 40px rgba(0,0,0,.25); transition:right .32s ease; z-index:1100; display:flex; flex-direction:column; }
-    .sheet.open { right:0; }
-    .sheet-head { display:flex; align-items:center; justify-content:space-between; padding: var(--space-4); border-bottom:1px solid var(--muted); }
-    .sheet-body { padding: var(--space-4); overflow:auto; }
-    .tabs { display:flex; gap: 16px; border-bottom: 2px solid var(--muted); padding-bottom:10px; margin-bottom: 16px; }
-    .tab { background:none; border:none; font-weight:700; padding:.4rem .2rem; cursor:pointer; color: var(--text-dim); }
-    .tab.active { color: var(--primary); border-bottom:2px solid var(--primary); }
-
-    /* Custom Leaflet marker */
-    .custom-marker { display:grid; place-items:center; font-size:22px; color:#fff; width:46px; height:46px; border-radius:50%; background: var(--primary); box-shadow: 0 8px 22px rgba(0,0,0,.22); }
-    .custom-marker.temp { background: var(--danger); }
-
-    /* Popup */
-    .popup { direction: rtl; max-width: 280px; }
-    .popup h4 { margin:0 0 4px; font-size:1rem; }
-    .popup p { margin:.25rem 0; }
-    .popup img { width:100%; max-height:160px; object-fit:cover; border-radius:10px; margin-top:6px; }
-    .popup .foot { margin-top:8px; text-align:start; }
-    .popup .delete { background: var(--danger); color:#fff; border:none; border-radius:8px; padding:.35rem .55rem; cursor:pointer; }
-
-    /* Loader */
-    .spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(0,0,0,0.12); border-left-color: var(--primary); border-radius:50%; animation: spin 1s linear infinite; margin-inline-start:6px; vertical-align: text-bottom; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Collapsed desktop sidebar */
-    .layout.collapse .sidebar { display:none; }
-
-    /* Mobile map-only view */
-    .layout.map-only .sidebar { display:none; }
-    .layout.map-only #map-card { grid-column: 1 / -1; }
-
-    /* Reduced motion */
-    @media (prefers-reduced-motion: reduce) {
-      * { animation-duration: .001s !important; transition-duration: .001s !important; }
+    .backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .backdrop.show {
+      opacity: 1;
+      pointer-events: auto;
     }
   </style>
 </head>
 <body>
-  <!-- Top bar -->
-  <header class="topbar" role="banner">
-    <div class="topbar-inner">
-      <button id="hamburger-btn" class="btn-icon" aria-label="פתח תפריט" title="תפריט" aria-controls="sheet" aria-expanded="false">
-        <i class="fas fa-bars"></i>
-      </button>
-      <div class="brand" aria-label="MealsForAll">
-        <i class="fa-solid fa-bowl-food"></i>
-        <span>MealsForAll</span>
-        <span class="chip">beta</span>
-      </div>
-      <nav class="top-actions" aria-label="קישורי משתמש">
-        <a href="login.html" class="chip">Login</a>
-        <a href="register.html" class="chip">Register</a>
-        <button id="theme-toggle" class="btn-icon theme-toggle" aria-label="Toggle theme" title="Theme" aria-pressed="false">
-          <i class="fa-solid fa-moon"></i>
-        </button>
-      </nav>
-    </div>
+  <header>
+    <div class="brand"><i class="fa-solid fa-bowl-food"></i> MealsForAll</div>
+    <button id="theme-toggle" class="btn-icon" aria-label="Toggle theme"><i class="fas fa-moon"></i></button>
   </header>
-
-  <main class="app">
-    <section id="sr-alert" class="visually-hidden" aria-live="polite"></section>
-
-    <div id="layout" class="layout">
-      <!-- Sidebar / Form -->
-      <aside class="sidebar card" aria-label="הוספת מיקום מזון">
-        <div class="form-title"><i class="fa-solid fa-location-dot"></i><span>הוסף מיקום מזון</span></div>
-
-        <div class="form-group">
-          <label for="location">מיקום</label>
-          <div class="input-ico">
-            <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
-            <input id="location" type="text" placeholder="הזן כתובת מלאה" autocomplete="street-address"/>
-            <span id="loading-spinner" class="spinner" style="display:none"></span>
-          </div>
-          <div class="hint">טיפ: ניתן לבחור נקודה ישירות על המפה</div>
-        </div>
-
-        <div class="form-group">
-          <label for="food">סוג מזון</label>
-          <div class="input-ico">
-            <i class="fas fa-utensils" aria-hidden="true"></i>
-            <input id="food" type="text" placeholder="איזה מזון זמין כאן?"/>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="form-group">
-            <label for="phone">טלפון</label>
-            <div class="input-ico">
-              <i class="fas fa-phone" aria-hidden="true"></i>
-              <input id="phone" type="text" placeholder="הזן מספר טלפון" inputmode="tel"/>
-            </div>
-          </div>
-          <div class="form-group">
-            <label for="amount">כמות</label>
-            <div class="input-ico">
-              <i class="fas fa-hashtag" aria-hidden="true"></i>
-              <input id="amount" type="number" min="1" value="1"/>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group upload">
-          <label class="upload-btn" for="food-image"><i class="fas fa-camera"></i> העלה תמונה
-            <input id="food-image" type="file" accept="image/*"/>
-          </label>
-          <div class="preview-wrap">
-            <img id="image-preview" class="preview-img" alt="תצוגה מקדימה"/>
-            <button id="remove-image" class="remove-img" title="הסר תמונה" aria-label="הסר תמונה">×</button>
-          </div>
-        </div>
-
-        <div class="actions">
-          <button id="submit-btn" class="btn btn-primary" aria-label="הוסף"><i class="fas fa-plus"></i> הוסף</button>
-          <button id="cancel-btn" class="btn btn-ghost" style="display:none"><i class="fas fa-xmark"></i> ביטול</button>
-        </div>
-
-        <div class="list-wrap">
-          <div class="list-head">
-            <h2 style="margin:0; font-size:1.05rem;">מיקומי מזון זמינים</h2>
-            <span id="entries-count" class="counter">0</span>
-          </div>
-          <div id="empty-state" class="empty">
-            <i class="fas fa-map" style="font-size:1.6rem; margin-bottom:.4rem;"></i>
-            <div>אין מיקומים זמינים</div>
-          </div>
-          <ul id="food-list" class="list" aria-label="רשימת מיקומים"></ul>
-        </div>
-      </aside>
-
-      <!-- Map -->
-      <section id="map-card" class="card" aria-label="מפה">
-        <div id="map"></div>
-        <div class="map-fab">
-          <button id="recenter" class="btn btn-ghost" title="מרכז לאיזור ישראל"><i class="fa-solid fa-crosshairs"></i> מרכז</button>
-        </div>
-      </section>
-    </div>
-  </main>
-
-  <!-- Mobile view toggle -->
-  <div class="view-toggle">
-    <button id="toggle-map-btn" class="btn-icon" aria-label="הצג/הסתר מפה"><i class="fas fa-map"></i></button>
-  </div>
-
-  <!-- Side sheet -->
-  <aside id="sheet" class="sheet" aria-hidden="true" aria-label="תפריט צד">
-    <div class="sheet-head">
-      <strong>תפריט</strong>
-      <button id="sheet-close" class="btn-icon" aria-label="סגור"><i class="fas fa-times"></i></button>
-    </div>
-    <div class="sheet-body">
-      <div class="tabs">
-        <button id="tab-map" class="tab active">Map</button>
-        <button id="tab-about" class="tab">About</button>
-      </div>
-      <div id="panel-map">
-        <a href="map.html" class="btn btn-primary" style="display:inline-block; margin-bottom:1rem;">Open Full Map</a>
-      </div>
-      <div id="panel-about" style="display:none">
-        <a href="about.html" class="btn btn-primary" style="display:inline-block; margin-bottom:1rem;">About</a>
-        <p class="hint">MealsForAll – שיתוף מיקומי מזון זמינים בקהילה.</p>
-      </div>
-      <hr style="border:none; border-top:1px solid var(--muted); margin: 1rem 0;"/>
-      <div style="display:flex; gap:8px;">
-        <a href="login.html" class="btn btn-ghost" style="flex:1">Login</a>
-        <a href="register.html" class="btn btn-ghost" style="flex:1">Signup</a>
-      </div>
-    </div>
-  </aside>
-
-  <!-- Scripts -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.3/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <nav class="menu">
+    <a href="map.html">Open Full Map</a>
+    <a href="about.html">About</a>
+    <a href="login.html">Login</a>
+    <a href="register.html">Signup</a>
+  </nav>
+  <div id="backdrop" class="backdrop" hidden></div>
   <script>
-    // =========================
-    // Supabase client
-    // =========================
-    const SUPA_URL = 'https://dieltjdqgeppyixximwe.supabase.co';
-    const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpZWx0amRxZ2VwcHlpeHhpbXdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEwMzY2MzMsImV4cCI6MjA1NjYxMjYzM30.NXZfUyvyrPzAeT75vWWWjY5h1LOe_vwaFiHBS1TMwtw';
-    const sb = supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: true, autoRefreshToken: true }});
-
-    // =========================
-    // State
-    // =========================
-    let currentUserId = null;
-    let map; const markers = {}; let foodLocations = []; let selectedCoordinates = null; let selectedImage = null;
-
-    // Elements
-    const els = {
-      layout:   document.getElementById('layout'),
-      location: document.getElementById('location'),
-      food:     document.getElementById('food'),
-      phone:    document.getElementById('phone'),
-      amount:   document.getElementById('amount'),
-      loading:  document.getElementById('loading-spinner'),
-      submit:   document.getElementById('submit-btn'),
-      cancel:   document.getElementById('cancel-btn'),
-      foodImage:document.getElementById('food-image'),
-      preview:  document.getElementById('image-preview'),
-      removeImg:document.getElementById('remove-image'),
-      list:     document.getElementById('food-list'),
-      count:    document.getElementById('entries-count'),
-      empty:    document.getElementById('empty-state'),
-      toggle:   document.getElementById('toggle-map-btn'),
-      // header & sheet
-      hbBtn:    document.getElementById('hamburger-btn'),
-      sheet:    document.getElementById('sheet'),
-      sheetClose:document.getElementById('sheet-close'),
-      tabMap:   document.getElementById('tab-map'),
-      tabAbout: document.getElementById('tab-about'),
-      panelMap: document.getElementById('panel-map'),
-      panelAbout:document.getElementById('panel-about'),
-      themeToggle: document.getElementById('theme-toggle'),
-      srAlert:  document.getElementById('sr-alert'),
-      recenter: document.getElementById('recenter')
-    };
-
-    // =========================
-    // Utilities
-    // =========================
-    const formatTime = (ms) => {
-      const total = Math.max(0, Math.floor(ms/60000));
-      const h = Math.floor(total/60), m = total%60;
-      return `${h}h ${m}m`;
-    };
-
-    const createIcon = (temp=false) => L.divIcon({
-      className: `custom-marker ${temp? 'temp':''}`,
-      html: `<i class=\"fas fa-${temp? 'crosshairs':'utensils'}\"></i>`,
-      iconSize: [46,46], iconAnchor:[23,23]
+    const toggleBtn = document.getElementById('theme-toggle');
+    const backdrop = document.getElementById('backdrop');
+    toggleBtn.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      toggleBtn.innerHTML = document.body.classList.contains('dark') ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     });
-
-    const announce = (msg) => { els.srAlert.textContent = msg; };
-
-    // =========================
-    // Render list
-    // =========================
-    function renderList(){
-      els.list.innerHTML = '';
-      els.count.textContent = foodLocations.length;
-      els.empty.style.display = foodLocations.length? 'none' : 'block';
-
-      foodLocations.sort((a,b)=>b.timestamp-a.timestamp).forEach(e=>{
-        const li = document.createElement('li');
-        li.className = 'item';
-        li.innerHTML = `
-          <div class="item-main">
-            <div class="item-title">${e.food}</div>
-            <div class="item-sub">${e.location}</div>
-            <div class="hint">נגמר בעוד: ${formatTime(e.expiresAt - Date.now())}</div>
-          </div>
-          <div class="item-meta">
-            <span class="pill">${e.amount}</span>
-            ${e.imageUrl? `<img src="${e.imageUrl}" class="thumb" alt="תמונה">` : ''}
-          </div>`;
-        li.onclick = () => { map.setView([e.coordinates.lat,e.coordinates.lng], 15); markers[e.id]?.openPopup(); };
-        els.list.appendChild(li);
-      });
-    }
-
-    // =========================
-    // Markers & popups
-    // =========================
-    function addMarker(e, temp=false){
-      if(!temp && markers[e.id]) { map.removeLayer(markers[e.id]); }
-      const m = L.marker([e.coordinates.lat,e.coordinates.lng], { icon: createIcon(temp) }).addTo(map);
-      const canDelete = !temp && e.createdBy === currentUserId;
-      const html = `
-        <div class="popup">
-          <h4>${e.food}</h4>
-          <p>${e.location}</p>
-          <p>כמות: ${e.amount}</p>
-          <p style="font-size:.85rem; color:var(--text-dim);">נגמר בעוד: ${formatTime(e.expiresAt - Date.now())}</p>
-          ${e.imageUrl ? `<img src="${e.imageUrl}" alt="תמונה">` : ''}
-          <div class="foot">
-            ${canDelete ? `<button class="delete"><i class="fas fa-trash"></i> מחק</button>` : ''}
-          </div>
-        </div>`;
-
-      m.bindPopup(html);
-      m.getPopup().on('add', () => {
-        const c = m.getPopup()._container;
-        const del = c.querySelector('.delete');
-        if(del){
-          del.onclick = async () => {
-            if(!confirm('Delete this location?')) return;
-            const { error } = await sb.from('food_locations').delete().eq('id', e.id);
-            if(error){ alert('Delete failed'); return; }
-            map.removeLayer(m); delete markers[e.id];
-            foodLocations = foodLocations.filter(f => f.id !== e.id);
-            renderList();
-            announce('Location deleted');
-          };
-        }
-      });
-
-      if(temp) { markers.temp = m; m.isTemporary = true; }
-      else { markers[e.id] = m; }
-    }
-
-    // =========================
-    // Data
-    // =========================
-    async function loadInitial(){
-      const now = Date.now();
-      const { data, error } = await sb.from('food_locations').select('*').gt('expiresAt', now);
-      if(error){ console.error(error); return; }
-      foodLocations = data || [];
-      foodLocations.forEach(e => addMarker(e));
-      renderList();
-    }
-
-    function setupRealtime(){
-      sb.channel('public:food_locations')
-        .on('postgres_changes', {event:'INSERT', schema:'public', table:'food_locations'}, payload => {
-          if(payload.new.expiresAt > Date.now()){
-            foodLocations.push(payload.new); addMarker(payload.new); renderList();
-          }
-        })
-        .on('postgres_changes', {event:'UPDATE', schema:'public', table:'food_locations'}, payload => {
-          if(payload.new.expiresAt > Date.now()){
-            foodLocations = foodLocations.map(f => f.id === payload.new.id ? payload.new : f);
-            addMarker(payload.new);
-          } else {
-            foodLocations = foodLocations.filter(f => f.id !== payload.new.id);
-            if(markers[payload.new.id]){ map.removeLayer(markers[payload.new.id]); delete markers[payload.new.id]; }
-          }
-          renderList();
-        })
-        .on('postgres_changes', {event:'DELETE', schema:'public', table:'food_locations'}, payload => {
-          foodLocations = foodLocations.filter(f => f.id !== payload.old.id);
-          if(markers[payload.old.id]){ map.removeLayer(markers[payload.old.id]); delete markers[payload.old.id]; }
-          renderList();
-        })
-        .subscribe();
-    }
-
-    async function reverseGeocode(lat, lng){
-      els.loading.style.display='inline-block';
-      try {
-        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
-        const j = await r.json();
-        els.location.value = j.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-      } catch {
-        els.location.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-      }
-      els.loading.style.display='none';
-    }
-
-    async function uploadImage(file, id){
-      if(!file || !file.type.startsWith('image/')){ alert('Not an image'); return null; }
-      const ext = file.name.split('.').pop();
-      const name = `${id}_${Date.now()}_${Math.random().toString(36).slice(2,7)}.${ext}`;
-      const { error } = await sb.storage.from('food_images').upload(name, file, { cacheControl:'3600', upsert:false });
-      if(error){ console.error(error); alert('Upload failed'); return null; }
-      const { data: pub } = sb.storage.from('food_images').getPublicUrl(name);
-      return pub.publicUrl;
-    }
-
-    // =========================
-    // Init
-    // =========================
-    window.onload = async () => {
-      // theme from storage
-      try {
-        const saved = localStorage.getItem('mfa-theme');
-        if(saved){ document.documentElement.setAttribute('color-scheme', saved); els.themeToggle.setAttribute('aria-pressed', saved==='dark'); }
-      } catch {}
-
-      // session
-      const { data: { session } } = await sb.auth.getSession();
-      currentUserId = session?.user?.id || null;
-
-      // map
-      map = L.map('map', { center:[31.7683,35.2137], zoom: 8, zoomControl: true });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' }).addTo(map);
-
-      // click => temp marker
-      map.on('click', (e) => {
-        if(markers.temp){ map.removeLayer(markers.temp); delete markers.temp; }
-        const { lat, lng } = e.latlng;
-        selectedCoordinates = [lat, lng];
-        reverseGeocode(lat, lng);
-        const m = L.marker([lat,lng], { icon: createIcon(true) }).addTo(map).bindPopup('<div class="popup"><strong>מיקום נבחר</strong><p>'+lat.toFixed(5)+', '+lng.toFixed(5)+'</p></div>').openPopup();
-        m.isTemporary = true; markers.temp = m; els.cancel.style.display='inline-block';
-      });
-
-      await loadInitial();
-      setupRealtime();
-
-      // Sweep expired (server-authoritative)
-      setInterval(()=>{
-        const now=Date.now();
-        foodLocations.filter(f=>f.expiresAt<=now).forEach(f=> sb.from('food_locations').delete().eq('id', f.id));
-      }, 60000);
-
-      // Image preview
-      els.foodImage.onchange = function(){
-        if(this.files[0]){
-          selectedImage = this.files[0];
-          const r = new FileReader();
-          r.onload = (e) => { els.preview.src = e.target.result; els.preview.style.display='block'; els.removeImg.style.display='grid'; };
-          r.readAsDataURL(selectedImage);
-        }
-      };
-      els.removeImg.onclick = () => { els.preview.style.display='none'; els.preview.src=''; els.removeImg.style.display='none'; selectedImage=null; };
-
-      // Submit
-      els.submit.onclick = () => {
-        if(!currentUserId){ alert('Login required'); return window.location.href='login.html'; }
-        const loc = els.location.value.trim();
-        const food = els.food.value.trim();
-        const phone = els.phone.value.trim();
-        const amt = els.amount.value.trim();
-        if(!loc || !food || !phone || !amt){ return alert('Fill all fields'); }
-        if(!selectedCoordinates){ return alert('Select on map or type address'); }
-        (async()=>{
-          const now = Date.now();
-          let imageUrl = null; if(selectedImage) imageUrl = await uploadImage(selectedImage, now.toString());
-          const entry = {
-            location: loc, food, phone, amount: parseInt(amt),
-            coordinates: { lat: selectedCoordinates[0], lng: selectedCoordinates[1] },
-            timestamp: now, expiresAt: now + 24*3600000, imageUrl, createdBy: currentUserId
-          };
-          const { error } = await sb.from('food_locations').insert([entry]);
-          if(error){ console.error(error); return alert('Insert failed'); }
-          // reset
-          els.location.value=''; els.food.value=''; els.phone.value=''; els.amount.value='1';
-          els.preview.style.display='none'; els.preview.src=''; els.removeImg.style.display='none';
-          if(markers.temp){ map.removeLayer(markers.temp); delete markers.temp; }
-          selectedCoordinates=null; els.cancel.style.display='none';
-          announce('Location added');
-        })();
-      };
-
-      // Cancel
-      els.cancel.onclick = () => {
-        if(markers.temp){ map.removeLayer(markers.temp); delete markers.temp; }
-        selectedCoordinates=null; els.location.value=''; els.cancel.style.display='none';
-      };
-
-      // Desktop collapse / Mobile map-only toggle
-      els.toggle.onclick = () => {
-        const isDesktop = window.innerWidth >= 900;
-        if(isDesktop){ els.layout.classList.toggle('collapse'); }
-        else { els.layout.classList.toggle('map-only'); setTimeout(()=> map.invalidateSize(), 120); }
-      };
-
-      // Sheet (hamburger)
-      const setSheet = (open) => {
-        els.sheet.classList.toggle('open', open);
-        els.sheet.setAttribute('aria-hidden', !open);
-        els.hbBtn.setAttribute('aria-expanded', open);
-      };
-      els.hbBtn.onclick = () => setSheet(true);
-      els.sheetClose.onclick = () => setSheet(false);
-      els.tabMap.onclick = ()=>{ els.tabMap.classList.add('active'); els.tabAbout.classList.remove('active'); els.panelMap.style.display='block'; els.panelAbout.style.display='none'; };
-      els.tabAbout.onclick = ()=>{ els.tabAbout.classList.add('active'); els.tabMap.classList.remove('active'); els.panelAbout.style.display='block'; els.panelMap.style.display='none'; };
-
-      // Theme toggle
-      els.themeToggle.onclick = () => {
-        const isDark = document.documentElement.getAttribute('color-scheme') === 'dark';
-        const next = isDark ? 'light' : 'dark';
-        document.documentElement.setAttribute('color-scheme', next);
-        els.themeToggle.setAttribute('aria-pressed', String(next==='dark'));
-        try { localStorage.setItem('mfa-theme', next); } catch {}
-      };
-
-      // Recenter
-      els.recenter.onclick = () => { map.setView([31.7683,35.2137], 8); };
-    };
   </script>
 </body>
 </html>
