@@ -208,6 +208,7 @@
         els.emailEl.disabled = true;
         els.passEl.disabled = true;
         els.loginBtn.disabled = true;
+        els.loginBtn.style.color = "gray"
         els.logoutBtn.onclick = async () => { await sb.auth.signOut(); location.reload(); };
       }
     })();
