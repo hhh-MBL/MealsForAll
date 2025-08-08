@@ -112,6 +112,11 @@
       </div>
 
       <button id="login-btn" class="btn btn-primary">התחבר</button>
+
+      <!-- Session banner + logout (only shown when already logged in) -->
+      <div id="auth-banner" class="links" style="display:none;margin-top:8px;"></div>
+      <button id="logout-btn" class="btn" style="display:none;margin-top:8px;">Logout</button>
+
       <div class="links">
         <a href="register.html">עדיין לא רשום? הרשם כאן</a> ·
         <a href="index.html">חזרה לעמוד הראשי</a>
@@ -144,10 +149,11 @@
     (function(){
       try {
         const saved = localStorage.getItem('mfa-theme');
+        const t = document.getElementById('theme-toggle');
         if(saved === 'dark'){
           document.body.classList.add('dark');
-          document.getElementById('theme-toggle').setAttribute('aria-pressed','true');
-          document.getElementById('theme-toggle').innerHTML = '<i class="fa-solid fa-sun"></i>';
+          t.setAttribute('aria-pressed','true');
+          t.innerHTML = '<i class="fa-solid fa-sun"></i>';
         }
       } catch {}
     })();
@@ -161,6 +167,10 @@
       themeToggle: document.getElementById('theme-toggle'),
       errorMsg: document.getElementById('error-message'),
       loginBtn: document.getElementById('login-btn'),
+      emailEl: document.getElementById('email'),
+      passEl: document.getElementById('password'),
+      authBanner: document.getElementById('auth-banner'),
+      logoutBtn: document.getElementById('logout-btn'),
     };
     function setSheet(open){
       els.sheet.classList.toggle('open', open);
@@ -187,17 +197,25 @@
       { auth: { persistSession: true, autoRefreshToken: true } }
     );
 
-    // If already logged in, bounce to home
+    // If already logged in: show banner instead of redirect
     (async()=>{
       const { data: { session } } = await sb.auth.getSession();
-      if(session?.user) window.location.href = 'index.html';
+      if (session?.user) {
+        els.authBanner.style.display = 'block';
+        els.authBanner.innerHTML = 'You are already logged in. <a href="index.html">Go to Home</a>';
+        els.logoutBtn.style.display = 'block';
+        // Optional: disable inputs to avoid confusion
+        els.emailEl.disabled = true;
+        els.passEl.disabled = true;
+        els.logoutBtn.onclick = async () => { await sb.auth.signOut(); location.reload(); };
+      }
     })();
 
     // Login
     els.loginBtn.addEventListener('click', async () => {
       els.errorMsg.textContent = '';
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value.trim();
+      const email = els.emailEl.value.trim();
+      const password = els.passEl.value.trim();
       if(!email || !password){ els.errorMsg.textContent = 'אנא מלא אימייל וסיסמה.'; return; }
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if(error){ els.errorMsg.textContent = 'שגיאה בהתחברות: ' + error.message; return; }
